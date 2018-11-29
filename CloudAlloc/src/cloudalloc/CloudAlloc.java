@@ -14,32 +14,29 @@ import java.util.Map;
  */
 public class CloudAlloc {
 
+    private static final String[] NAMES = {"t3.micro","m5.large","r3.massive"};
+    private static final double[] PRICES = {0.95,2.95,4.95};
+    private static final int[] CAPACITIES = {6,8,4};
+    
     private final Map<String,Integer> maxCloudsPerType;
     private final Map<String,Double> nominalPricePerType;
     private final Map<String,Map<String,Cloud>> cloudMap;
     private Map<String,User> users; 
-    private Map<String,Cloud> microClouds;
-    private Map<String,Cloud> largeClouds;
-    private Map<String,Cloud> massiveClouds;
     
     public CloudAlloc(){
         this.maxCloudsPerType = new HashMap<>();
-        this.maxCloudsPerType.put("t3.micro",6);
-        this.maxCloudsPerType.put("m5.large",8);
-        this.maxCloudsPerType.put("r3.massive",4);
+        for(int i = 0; i < NAMES.length; i++)
+            this.maxCloudsPerType.put(NAMES[i],CAPACITIES[i]);
+     
         this.nominalPricePerType = new HashMap<>();
-        this.nominalPricePerType.put("t3.micro", 0.95);
-        this.nominalPricePerType.put("m5.large", 2.95);
-        this.nominalPricePerType.put("r3.massive",4.95);
+        for(int i = 0; i < NAMES.length; i++)
+            this.nominalPricePerType.put(NAMES[i], PRICES[i]);
+ 
         this.cloudMap = new HashMap<>();
-        this.cloudMap.put("t3.micro", this.microClouds);
-        this.cloudMap.put("m5.large", this.largeClouds);
-        this.cloudMap.put("r3.massive",this.massiveClouds);
-        
+        for(int i = 0; i < NAMES.length; i++)
+            this.cloudMap.put(NAMES[i], new HashMap<String,Cloud>());
+       
         this.users = new HashMap<>();
-        this.microClouds = new HashMap<>();
-        this.largeClouds = new HashMap<>();
-        this.massiveClouds = new HashMap<>();
     }
     
     public void requestCloud(User u, String type) {
