@@ -11,11 +11,10 @@ package cloudalloc;
  */
 public class Menu {
     
-    private int menu;
     
-    public void show() {
-        switch(menu) {
-            case 0 : System.out.println("******************\n," + 
+    public void show(int n) {
+        switch(n) {
+            case 0 : System.out.println("******************\n" + 
                                         "1) Iniciar Sessão\n" +
                                         "0) Sair\n" +
                                         "******************");
