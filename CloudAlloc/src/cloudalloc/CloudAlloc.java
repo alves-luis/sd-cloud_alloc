@@ -20,7 +20,11 @@ public class CloudAlloc {
     
     private final Map<String,Integer> maxCloudsPerType;
     private final Map<String,Double> nominalPricePerType;
-    private final Map<String,Map<String,Cloud>> cloudMap;
+    
+    /* Key -> cloudType | Value -> Map of Id->Cloud */
+    private Map<String,Map<String,Cloud>> cloudMap;
+    
+    /* Map of users by e-mail */
     private Map<String,User> users; 
     
     public CloudAlloc(){
@@ -70,6 +74,15 @@ public class CloudAlloc {
     public void freeCloud(User u, int id, String type) {
         Map<String,Cloud> usedClouds = this.cloudMap.get(type);
         // to do :3
+    }
+    
+    public User loginUser(String email, String pass) throws InexistentUserException, IncorrectPasswordException {
+        if (!this.users.containsKey(email))
+            throw new InexistentUserException(email);
+        else if (!this.users.get(email).login(pass))
+                throw new IncorrectPasswordException();
+        
+        return this.users.get(email);
     }
 }
 
