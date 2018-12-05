@@ -37,8 +37,9 @@ public class CloudAlloc {
             this.nominalPricePerType.put(NAMES[i], PRICES[i]);
  
         this.cloudMap = new HashMap<>();
-        for(int i = 0; i < NAMES.length; i++)
-            this.cloudMap.put(NAMES[i], new HashMap<String,Cloud>());
+        for (String NAMES1 : NAMES) {
+            this.cloudMap.put(NAMES1, new HashMap<>());
+        }
        
         this.users = new HashMap<>();
     }
