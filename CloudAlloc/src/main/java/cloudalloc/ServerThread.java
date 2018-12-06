@@ -35,6 +35,12 @@ public class ServerThread implements Runnable {
   @Override
   public void run() {
     startUp();
+    try {
+        s.close();
+    }
+    catch (IOException e) {
+        System.out.println(e.getMessage());
+    }
   }
 
   private int getDecision() {
