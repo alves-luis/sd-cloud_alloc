@@ -10,5 +10,10 @@ package cloudalloc;
  * @author Luís Alves
  */
 public class Server {
-    
+    public static void main(String[] args) {
+        CloudAlloc c = new CloudAlloc();
+        while(true) {
+            //
+        }
+    }
 }
