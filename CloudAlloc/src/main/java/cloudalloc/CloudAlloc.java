@@ -85,5 +85,9 @@ public class CloudAlloc {
         
         return this.users.get(email);
     }
+    
+    public void registerUser(String email, String pass) throws EmailNotUniqueException {
+        // TODO
+    }
 }
 

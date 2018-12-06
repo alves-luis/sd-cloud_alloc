@@ -7,9 +7,14 @@ package cloudalloc;
 
 /**
  *
- * @author Luís Alves
+ * @author alves-luis
  */
-public class Client {
-    public static void main(String[] args) {
+public class EmailNotUniqueException extends Exception {
+    public EmailNotUniqueException() {
+        super();
+    }
+    
+    public EmailNotUniqueException(String msg) {
+        super(msg);
     }
 }
