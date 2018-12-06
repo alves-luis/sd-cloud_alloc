@@ -1,7 +1,5 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * This Thread is running everytime a new user connects to the main server
  */
 package cloudalloc;
 
@@ -34,6 +32,7 @@ public class ServerThread implements Runnable {
       }
   }
 
+  @Override
   public void run() {
     startUp();
   }
@@ -45,10 +44,21 @@ public class ServerThread implements Runnable {
       input = in.readLine();
       r = Integer.parseInt(input);
     }
-    catch (Exception e) {
-      System.out.println("Error in parsing decision!");
+    catch (IOException | NumberFormatException e) {
+      System.out.println("Error in parsing decision! " + e.getMessage());
     }
     return r;
+  }
+  
+  private String getString() {
+      String input = null;
+      try {
+          input = in.readLine();
+      }
+      catch (IOException e) {
+          System.out.println(e.getMessage());
+      }
+      return input;
   }
 
   /** When user connects, either logs in or registers in the system */
@@ -67,24 +77,12 @@ public class ServerThread implements Runnable {
     } while(decision != 0);
   }
   
+  // user wants to register
   private void register() {
     out.println("Insere o teu e-mail:");
-    String email = null;
-    try {
-        email = in.readLine();
-    }
-    catch (Exception e) {
-        System.out.println("Error in read e-mail");
-    }
+    String email = getString();
     out.println("Insere a palavra-passe:");
-    String pass = null;
-    try {
-       pass = in.readLine(); 
-    }
-    catch (Exception e) {
-        System.out.println("Error in reading password");
-    }
-    
+    String pass = getString(); 
     try {
         c.registerUser(email, pass);
     }
@@ -94,24 +92,15 @@ public class ServerThread implements Runnable {
     }
   }
   
+  // User wants to login
   private void login() {
     out.println("Insere o teu e-mail:");
-    String email = null;
-    try {
-      email = in.readLine();
-    }
-    catch (Exception e) {
-      System.out.println("Error in reading e-mail!");
-    }
-    String pass = null;
-    try {
-      pass = in.readLine();
-    }
-    catch (Exception e) {
-      System.out.println("Error in reading the password!");
-    }
+    String email = getString();
+    out.println("Insere a tua palavra-passe:");
+    String pass = getString();
     try {
       this.u = c.loginUser(email, pass);
+      loggedIn();
     }
     catch (InexistentUserException e) {
       System.out.println("User does not exist!");
@@ -121,5 +110,16 @@ public class ServerThread implements Runnable {
       System.out.println("Incorrect password!");
       out.println("Impossível autenticar!");
     }
+  }
+  
+  // User has loggedIn, so do stuff
+  private void loggedIn() {
+      int decision;
+      do {
+          decision = getDecision();
+          switch(decision) {
+              case 0: break;
+          }
+      } while(decision != 0);
   }
 }
