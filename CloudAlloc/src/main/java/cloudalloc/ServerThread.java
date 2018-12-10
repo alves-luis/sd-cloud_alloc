@@ -36,15 +36,21 @@ public class ServerThread implements Runnable {
   public void run() {
     startUp();
     try {
-        s.close();
+      out.println("Bye!");
+      System.out.println("User disconnected with IP " + s.getRemoteSocketAddress());
+      s.close();
     }
     catch (IOException e) {
-        System.out.println(e.getMessage());
+      System.out.println(e.getMessage());
     }
+  }
+  
+  private void terminate() {
+    // TODO
   }
 
   private int getDecision() {
-    String input;
+    String input = null;
     int r = 0;
     try {
       input = in.readLine();
@@ -57,14 +63,14 @@ public class ServerThread implements Runnable {
   }
   
   private String getString() {
-      String input = null;
+    String input = null;
       try {
-          input = in.readLine();
+        input = in.readLine();
       }
       catch (IOException e) {
-          System.out.println(e.getMessage());
+        System.out.println(e.getMessage());
       }
-      return input;
+    return input;
   }
 
   /** When user connects, either logs in or registers in the system */
