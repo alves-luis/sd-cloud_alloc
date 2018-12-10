@@ -9,12 +9,12 @@ package cloudalloc;
  *
  * @author Luís Alves
  */
-class IncorrectPasswordException extends Exception {
+class FailedLoginException extends Exception {
 
-    public IncorrectPasswordException() {
+    public FailedLoginException() {
     }
 
-    public IncorrectPasswordException(String message) {
+    public FailedLoginException(String message) {
         super(message);
     }
     
