@@ -77,15 +77,15 @@ public class ServerThread implements Runnable {
   private void startUp() {
     int decision;
     do {
-        out.println(Menu.loginMenu());
-        decision = getDecision();
-        switch(decision) {
-            case 1: login();
+      out.println(Menu.loginMenu());
+      decision = getDecision();
+      switch(decision) {
+        case 1: login();
                 break;
-            case 2: register();
+        case 2: register();
                 break;
-            default: break;
-        }
+        default: break;
+      }
     } while(decision != 0);
   }
   
@@ -96,11 +96,13 @@ public class ServerThread implements Runnable {
     out.println("Insere a palavra-passe:");
     String pass = getString(); 
     try {
-        c.registerUser(email, pass);
+      this.u = c.registerUser(email, pass);
+      System.out.println("User with IP " + s.getRemoteSocketAddress() + " registered with e-mail " + email);
+      loggedIn();
     }
     catch (EmailNotUniqueException e) {
-        out.println("Email já existe! " + e.getMessage());
-        System.out.println("Email already registered");
+      out.println("Email já existe! " + e.getMessage());
+      System.out.println("Email already registered");
     }
   }
   
@@ -112,26 +114,28 @@ public class ServerThread implements Runnable {
     String pass = getString();
     try {
       this.u = c.loginUser(email, pass);
+      System.out.println("User with IP " + s.getRemoteSocketAddress() + " logged in with e-mail " + email);
       loggedIn();
     }
     catch (InexistentUserException e) {
       System.out.println("User does not exist!");
-      out.println("Impossível autenticar!");
+      out.println("Utilizador não registado!");
     }
-    catch (IncorrectPasswordException e) {
-      System.out.println("Incorrect password!");
-      out.println("Impossível autenticar!");
+    catch (FailedLoginException e) {
+      System.out.println("Failed login!");
+      out.println("Erro de autenticação!");
     }
   }
   
-  // User has loggedIn, so do stuff
+  // User has loggedIn, so do stuff, namely create a new Thread
   private void loggedIn() {
-      int decision;
-      do {
-          decision = getDecision();
-          switch(decision) {
-              case 0: break;
-          }
-      } while(decision != 0);
+    out.println("Bem-vindo " + u.getEmail());
+    int decision;
+    do {
+      decision = getDecision();
+      switch(decision) {
+        case 0: break;
+      }
+    } while(decision != 0);
   }
 }

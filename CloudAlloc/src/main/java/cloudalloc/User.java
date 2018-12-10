@@ -5,8 +5,8 @@
  */
 package cloudalloc;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
@@ -14,66 +14,97 @@ import java.util.List;
  */
 public class User {
     
-    private int id;
-    private String email;
-    private String password;
-    private List<Cloud> myClouds;
-    private boolean loggedIn;
+  private String email;
+  private String password;
+  private Map<String,Cloud> myClouds;
+  private boolean loggedIn;
     
-    public User(int id, String e, String pass){
-        this.id = id;
-        this.email = e;
-        this.password = pass;
-        this.myClouds = new ArrayList<>();
-        this.loggedIn = true;
-    }
+  /**
+   *
+   * @param e
+   * @param pass
+   */
+  public User(String e, String pass){
+    this.email = e;
+    this.password = pass;
+    this.myClouds = new HashMap<>();
+    this.loggedIn = true;
+  }
 
-    public int getId() {
-        return id;
-    }
+  /**
+   *
+   * @return
+   */
+  public String getEmail() {
+    return email;
+  }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+  /**
+   *
+   * @param email
+   */
+  public void setEmail(String email) {
+    this.email = email;
+  }
 
-    public String getEmail() {
-        return email;
-    }
+  /**
+   *
+   * @param password
+   */
+  public void setPassword(String password) {
+    this.password = password;
+  }
+    
+  // Only one person can login
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+  /**
+   *
+   * @param pass
+   * @return
+   */
+  public synchronized boolean login (String pass){
+    loggedIn = this.password.equals(pass) || this.loggedIn;
+    return !loggedIn && this.password.equals(pass);
+  }
+    
+  // Only one person can logout
 
-    public void setPassword(String password) {
-        this.password = password;
-    }
+  /**
+   *
+   * @return
+   */
+  public synchronized boolean logout() {
+    boolean success = this.loggedIn;
+    if (success) this.loggedIn = false;
+    return success;
+  }
     
-    public boolean login (String pass){
-        boolean success = this.password.equals(pass) && !this.loggedIn;
-        if (success) this.loggedIn = true;
-        return success;
-    }
+  /**
+   *
+   * @param c
+   */
+  public void addCloud(Cloud c) {
+    this.myClouds.put(c.getId(),c);
+  }
     
-    public boolean logout() {
-        boolean success = this.loggedIn;
-        if (success) this.loggedIn = false;
-        return success;
-    }
+  /**
+   *
+   * @param id
+   * @throws InexistentCloudException
+   */
+  public void removeCloud(String id) throws InexistentCloudException {
+    Cloud c = this.myClouds.get(id);
+    if (c == null)
+      throw new InexistentCloudException(id);
+    this.myClouds.remove(id);
+  }
     
-    public void addCloud(Cloud c) {
-        this.myClouds.add(c);
-    }
-    
-    public void removeCloud(String id) throws InexistentCloudException {
-        for(Cloud c : this.myClouds)
-            if (c.getId().equals(id)) {
-                myClouds.remove(c);
-                break;
-            }
-    }
-    
-    public double getTotalDebt() {
-        return this.myClouds.stream().mapToDouble(c -> c.getAmmountToPay()).sum();
-    }
+  /**
+   *
+   * @return
+   */
+  public double getTotalDebt() {
+    return this.myClouds.values().stream().mapToDouble(c -> c.getAmmountToPay()).sum();
+  }
     
 }
