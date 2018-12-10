@@ -18,12 +18,14 @@ public class User {
     private String email;
     private String password;
     private List<Cloud> myClouds;
+    private boolean loggedIn;
     
     public User(int id, String e, String pass){
         this.id = id;
         this.email = e;
         this.password = pass;
         this.myClouds = new ArrayList<>();
+        this.loggedIn = true;
     }
 
     public int getId() {
@@ -47,7 +49,15 @@ public class User {
     }
     
     public boolean login (String pass){
-        return this.password.equals(pass);
+        boolean success = this.password.equals(pass) && !this.loggedIn;
+        if (success) this.loggedIn = true;
+        return success;
+    }
+    
+    public boolean logout() {
+        boolean success = this.loggedIn;
+        if (success) this.loggedIn = false;
+        return success;
     }
     
     public void addCloud(Cloud c) {

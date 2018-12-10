@@ -21,7 +21,7 @@ public class Server {
             while(true) {
                 Socket s = ss.accept();
                 new Thread(new ServerThread(s,c)).start();
-                System.out.println("User with IP " + s.getRemoteSocketAddress());
+                System.out.println("User connected with IP " + s.getRemoteSocketAddress());
             }
         }
         catch (IOException e) {
