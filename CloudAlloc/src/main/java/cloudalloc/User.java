@@ -13,12 +13,12 @@ import java.util.Map;
  * @author grupo
  */
 public class User {
-    
+
   private String email;
   private String password;
   private Map<String,Cloud> myClouds;
   private boolean loggedIn;
-    
+
   /**
    *
    * @param e
@@ -54,7 +54,7 @@ public class User {
   public void setPassword(String password) {
     this.password = password;
   }
-    
+
   // Only one person can login
 
   /**
@@ -62,11 +62,12 @@ public class User {
    * @param pass
    * @return
    */
-  public synchronized boolean login (String pass){
-    loggedIn = this.password.equals(pass) || this.loggedIn;
-    return !loggedIn && this.password.equals(pass);
+  public synchronized boolean login (String pass) {
+    boolean canLogin = !loggedIn;
+    loggedIn = this.password.equals(pass) && canLogin;
+    return loggedIn;
   }
-    
+
   // Only one person can logout
 
   /**
@@ -74,11 +75,11 @@ public class User {
    * @return
    */
   public synchronized boolean logout() {
-    boolean success = this.loggedIn;
-    if (success) this.loggedIn = false;
-    return success;
+    boolean canLogout = this.loggedIn;
+    if (canLogout) this.loggedIn = false;
+    return canLogout;
   }
-    
+
   /**
    *
    * @param c
@@ -86,7 +87,7 @@ public class User {
   public void addCloud(Cloud c) {
     this.myClouds.put(c.getId(),c);
   }
-    
+
   /**
    *
    * @param id
@@ -98,7 +99,7 @@ public class User {
       throw new InexistentCloudException(id);
     this.myClouds.remove(id);
   }
-    
+
   /**
    *
    * @return
@@ -106,5 +107,5 @@ public class User {
   public double getTotalDebt() {
     return this.myClouds.values().stream().mapToDouble(c -> c.getAmmountToPay()).sum();
   }
-    
+
 }
