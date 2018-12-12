@@ -115,7 +115,7 @@ public class CloudAlloc {
     }
     if (u == null)
       throw new InexistentUserException(email);
-    if (u.login(pass))
+    if (!u.login(pass))
       throw new FailedLoginException();
 
     return u;
