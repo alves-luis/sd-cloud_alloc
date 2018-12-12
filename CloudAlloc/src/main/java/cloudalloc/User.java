@@ -68,10 +68,8 @@ public class User {
     return loggedIn;
   }
 
-  // Only one person can logout
-
   /**
-   *
+   * Only one person can logout at a time, that's why it is synchronized
    * @return
    */
   public synchronized boolean logout() {
