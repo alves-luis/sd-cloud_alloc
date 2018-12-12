@@ -144,7 +144,7 @@ public class CloudAlloc {
     return u;
   }
 
-  private String typeFromId(String id){
+  private static String typeFromId(String id){
     return id.split("\\_")[0];
   }
 }

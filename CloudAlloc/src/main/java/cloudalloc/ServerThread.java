@@ -35,18 +35,18 @@ public class ServerThread implements Runnable {
   @Override
   public void run() {
     startUp();
+    terminate();
+  }
+  
+  private void terminate() {
     try {
-      out.println("Bye!");
+      out.println("Bye bye!");
       System.out.println("User disconnected with IP " + s.getRemoteSocketAddress());
       s.close();
     }
     catch (IOException e) {
       System.out.println(e.getMessage());
     }
-  }
-  
-  private void terminate() {
-    // TODO
   }
 
   private int getDecision() {
@@ -150,6 +150,9 @@ public class ServerThread implements Runnable {
     do {
       decision = getDecision();
       switch(decision) {
+        case 0: out.println("Goodbye " + u.getEmail() + " !");
+                u.logout();
+                break;
         case 1: out.println(Menu.requestMenu());
                 requestCloud();
                 break;

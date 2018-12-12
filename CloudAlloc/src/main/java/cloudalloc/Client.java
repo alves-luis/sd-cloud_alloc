@@ -27,7 +27,8 @@ public class Client {
             String input;
             while((input = inSys.readLine()) != null)
                 out.println(input);
-            s.shutdownOutput();
+            out.close();
+            inSys.close();
             s.close();
         }
         catch (IOException e) {
