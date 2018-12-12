@@ -27,6 +27,9 @@ public class CloudAlloc {
     /* Map of users by e-mail */
     private Map<String,User> users; 
     
+    /* Counter for no repetition of ids */
+    private int nextId;
+    
     public CloudAlloc(){
         this.maxCloudsPerType = new HashMap<>();
         for(int i = 0; i < NAMES.length; i++)
@@ -42,6 +45,8 @@ public class CloudAlloc {
         }
        
         this.users = new HashMap<>();
+        
+        this.nextId = 0;
     }
     
     public void requestCloud(User u, String type) {
@@ -50,8 +55,8 @@ public class CloudAlloc {
             // put on hold or get auctionedOnes
         }
         else {
-            int id = usedClouds.size();
-            String typeId = type + "." + id;
+            int id = this.nextId;
+            String typeId = type + "_" + id;
             Cloud c = new Cloud(typeId,type,this.nominalPricePerType.get(type),false);
             u.addCloud(c);
             usedClouds.put(typeId,c);
@@ -64,17 +69,24 @@ public class CloudAlloc {
             // put on hold and store auction value
         }
         else {
-            int id = usedClouds.size();
-            String typeId = type + "." + id;
+            int id = this.nextId++;
+            String typeId = type + "_" + id;
             Cloud c = new Cloud(typeId,type,value,true);
             u.addCloud(c);
             usedClouds.put(typeId,c);
         }
     }
     
-    public void freeCloud(User u, int id, String type) {
-        Map<String,Cloud> usedClouds = this.cloudMap.get(type);
-        // to do :3
+    
+    public void freeCloud(User u, String id) {
+        Map<String,Cloud> usedClouds = this.cloudMap.get(typeFromId(id));
+        usedClouds.remove(id);
+        try{
+            u.removeCloud(id);
+        }
+        catch (InexistentCloudException e){
+          System.out.println("Cloud " + id + " doesn't exist.");
+        }
     }
     
     public User loginUser(String email, String pass) throws InexistentUserException, IncorrectPasswordException {
@@ -85,5 +97,32 @@ public class CloudAlloc {
         
         return this.users.get(email);
     }
+
+
+    private String typeFromId(String id){
+       return id.split("\\_")[0]; 
+    }
+    
+
+    
+    
+    
+    
+    
+    
+    public static void main(String[] args) {
+        String id = "t3.micro_3";
+        String id2 = "m5.large_7";
+        System.out.println(idFromId(id) + " e " + idFromId(id2));
+    }
+         
+
+
+
+
+
+
+
+
 }
 
