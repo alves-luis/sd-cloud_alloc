@@ -9,6 +9,13 @@ package cloudalloc;
  *
  * @author Luís Alves
  */
-public class ServerWriter {
+class FailedLoginException extends Exception {
+
+    public FailedLoginException() {
+    }
+
+    public FailedLoginException(String message) {
+        super(message);
+    }
     
 }

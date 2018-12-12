@@ -7,15 +7,14 @@ package cloudalloc;
 
 /**
  *
- * @author Luís Alves
+ * @author alves-luis
  */
-class IncorrectPasswordException extends Exception {
-
-    public IncorrectPasswordException() {
-    }
-
-    public IncorrectPasswordException(String message) {
-        super(message);
+public class EmailNotUniqueException extends Exception {
+    public EmailNotUniqueException() {
+        super();
     }
     
+    public EmailNotUniqueException(String msg) {
+        super(msg);
+    }
 }

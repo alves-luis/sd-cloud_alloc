@@ -10,23 +10,23 @@ package cloudalloc;
  * @author Luís Alves
  */
 public class Menu {
+
+
+    public static String mainMenu() {
+        return("**********************\n" +
+               "1) Pedir Servidor\n" +
+               "2) Leilão de Servidor\n" +
+               "3) Consultar dívida\n" +
+               "4) Libertar Servidor\n" +
+               "0) Sair\n" +
+               "**********************");
+    }
     
-    
-    public void show(int n) {
-        switch(n) {
-            case 0 : System.out.println("******************\n" + 
-                                        "1) Iniciar Sessão\n" +
-                                        "0) Sair\n" +
-                                        "******************");
-                     break;
-            case 1 : System.out.println("**********************\n" +
-                                        "1) Pedir Servidor\n" +
-                                        "2) Leilão de Servidor\n" +
-                                        "3) Consultar dívida\n" +
-                                        "4) Libertar Servidor\n" +
-                                        "0) Sair\n" +
-                                        "**********************");
-                     break;
-        }
+    public static String loginMenu() {
+        return("******************\n" +
+               "1) Iniciar Sessão\n" +
+               "2) Registar\n" +
+               "0) Sair\n" +
+               "******************");
     }
 }

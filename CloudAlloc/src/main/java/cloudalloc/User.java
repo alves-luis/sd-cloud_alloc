@@ -5,8 +5,8 @@
  */
 package cloudalloc;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
@@ -14,56 +14,97 @@ import java.util.List;
  */
 public class User {
     
-    private int id;
-    private String email;
-    private String password;
-    private List<Cloud> myClouds;
+  private String email;
+  private String password;
+  private Map<String,Cloud> myClouds;
+  private boolean loggedIn;
     
-    public User(int id, String e, String pass){
-        this.id = id;
-        this.email = e;
-        this.password = pass;
-        this.myClouds = new ArrayList<>();
-    }
+  /**
+   *
+   * @param e
+   * @param pass
+   */
+  public User(String e, String pass){
+    this.email = e;
+    this.password = pass;
+    this.myClouds = new HashMap<>();
+    this.loggedIn = true;
+  }
 
-    public int getId() {
-        return id;
-    }
+  /**
+   *
+   * @return
+   */
+  public String getEmail() {
+    return email;
+  }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+  /**
+   *
+   * @param email
+   */
+  public void setEmail(String email) {
+    this.email = email;
+  }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
+  /**
+   *
+   * @param password
+   */
+  public void setPassword(String password) {
+    this.password = password;
+  }
     
-    public boolean login (String pass){
-        return this.password.equals(pass);
-    }
+  // Only one person can login
+
+  /**
+   *
+   * @param pass
+   * @return
+   */
+  public synchronized boolean login (String pass){
+    loggedIn = this.password.equals(pass) || this.loggedIn;
+    return !loggedIn && this.password.equals(pass);
+  }
     
-    public void addCloud(Cloud c) {
-        this.myClouds.add(c);
-    }
+  // Only one person can logout
+
+  /**
+   *
+   * @return
+   */
+  public synchronized boolean logout() {
+    boolean success = this.loggedIn;
+    if (success) this.loggedIn = false;
+    return success;
+  }
     
-    public void removeCloud(String id) throws InexistentCloudException {
-        for(Cloud c : this.myClouds)
-            if (c.getId().equals(id)) {
-                myClouds.remove(c);
-                break;
-            }
-    }
+  /**
+   *
+   * @param c
+   */
+  public void addCloud(Cloud c) {
+    this.myClouds.put(c.getId(),c);
+  }
     
-    public double getTotalDebt() {
-        return this.myClouds.stream().mapToDouble(c -> c.getAmmountToPay()).sum();
-    }
+  /**
+   *
+   * @param id
+   * @throws InexistentCloudException
+   */
+  public void removeCloud(String id) throws InexistentCloudException {
+    Cloud c = this.myClouds.get(id);
+    if (c == null)
+      throw new InexistentCloudException(id);
+    this.myClouds.remove(id);
+  }
+    
+  /**
+   *
+   * @return
+   */
+  public double getTotalDebt() {
+    return this.myClouds.values().stream().mapToDouble(c -> c.getAmmountToPay()).sum();
+  }
     
 }
