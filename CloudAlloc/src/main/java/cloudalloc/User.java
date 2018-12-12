@@ -85,11 +85,7 @@ public class User {
   public void addCloud(Cloud c) {
     this.myClouds.put(c.getId(),c);
   }
-<<<<<<< HEAD
 
-=======
-
->>>>>>> 6e8b8ed8c03b5a1868fe1dd7ab340b08a005ada5
   /**
    *
    * @param id
