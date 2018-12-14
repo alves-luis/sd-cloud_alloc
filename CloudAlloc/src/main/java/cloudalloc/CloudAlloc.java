@@ -5,8 +5,11 @@
  */
 package cloudalloc;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -25,13 +28,18 @@ public class CloudAlloc {
   /* Key -> cloudType | Value -> Map of Id->Cloud */
   private Map<String,Map<String,Cloud>> cloudMap;
   private ReentrantLock cloudLock;
+  private Condition cloudAvailable;
+  
+  /* Counter for no repetition of ids */
+  private int nextId;
+  
+  /* Auctions running */
+  /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
+  private Map<String,Map<Double,User>> auctionsMap;
 
   /* Map of users by e-mail */
   private Map<String,User> users;
   private ReentrantLock userLock;
-
-  /* Counter for no repetition of ids */
-  private int nextId;
 
   public CloudAlloc(){
     this.maxCloudsPerType = new HashMap<>();
@@ -46,6 +54,11 @@ public class CloudAlloc {
     for (String NAMES1 : NAMES)
       this.cloudMap.put(NAMES1, new HashMap<>());
     this.cloudLock = new ReentrantLock();
+    this.cloudAvailable = cloudLock.newCondition();
+    
+    this.auctionsMap = new HashMap<>();
+    for(String NAMES1: NAMES)
+      this.auctionsMap.put(NAMES1,new TreeMap<>(Comparator.reverseOrder()));
 
     this.users = new HashMap<>();
     this.userLock = new ReentrantLock();
