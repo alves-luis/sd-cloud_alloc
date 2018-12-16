@@ -5,8 +5,11 @@
  */
 package cloudalloc;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -25,13 +28,18 @@ public class CloudAlloc {
   /* Key -> cloudType | Value -> Map of Id->Cloud */
   private Map<String,Map<String,Cloud>> cloudMap;
   private ReentrantLock cloudLock;
+  private Condition cloudAvailable;
+
+  /* Counter for no repetition of ids */
+  private int nextId;
+
+  /* Auctions running */
+  /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
+  private Map<String,Map<Double,User>> auctionsMap;
 
   /* Map of users by e-mail */
   private Map<String,User> users;
   private ReentrantLock userLock;
-
-  /* Counter for no repetition of ids */
-  private int nextId;
 
   public CloudAlloc(){
     this.maxCloudsPerType = new HashMap<>();
@@ -46,6 +54,11 @@ public class CloudAlloc {
     for (String NAMES1 : NAMES)
       this.cloudMap.put(NAMES1, new HashMap<>());
     this.cloudLock = new ReentrantLock();
+    this.cloudAvailable = cloudLock.newCondition();
+
+    this.auctionsMap = new HashMap<>();
+    for(String NAMES1: NAMES)
+      this.auctionsMap.put(NAMES1,new TreeMap<>(Comparator.reverseOrder()));
 
     this.users = new HashMap<>();
     this.userLock = new ReentrantLock();
@@ -54,44 +67,65 @@ public class CloudAlloc {
 
   public void requestCloud(User u, String type) {
     Map<String,Cloud> usedClouds = this.cloudMap.get(type);
-    if (usedClouds.size() >= this.maxCloudsPerType.get(type)) { // probs while
-      // put on hold or get auctionedOnes
+    int id = -1;
+    try {
+      cloudLock.lock();
+      int currentSize = usedClouds.size();
+      if (currentSize >= this.maxCloudsPerType.get(type)) {
+        // wait up or try to get auctioned one
+        // this is what needs to be done
+      }
+      id = this.nextId++;
     }
-    else {
-      int id = this.nextId;
-      String typeId = type + "_" + id;
-      Cloud c = new Cloud(typeId,type,this.nominalPricePerType.get(type),false);
-      u.addCloud(c);
-      usedClouds.put(typeId,c);
+    finally {
+      cloudLock.unlock();
     }
+    String typeId = type + "_" + id;
+    Cloud c = new Cloud(typeId,type,this.nominalPricePerType.get(type),false);
+    u.addCloud(c);
+    usedClouds.put(typeId, c);
   }
 
   public void auctionCloud(User u, String type, double value) {
     Map<String,Cloud> usedClouds = this.cloudMap.get(type);
-    if (usedClouds.size() >= this.maxCloudsPerType.get(type)) { // probs while
-      // put on hold and store auction value
+    int id = -1;
+    try {
+      cloudLock.lock();
+      int currentSize = usedClouds.size();
+      if (currentSize >= this.maxCloudsPerType.get(type)) {
+        // add myself to queue, according to my value and ZZZzzzZZZ
+        // this is what needs to be done
+      }
+      id = this.nextId;
     }
-    else {
-      int id = this.nextId++;
-      String typeId = type + "_" + id;
-      Cloud c = new Cloud(typeId,type,value,true);
-      u.addCloud(c);
-      usedClouds.put(typeId,c);
+    finally {
+      cloudLock.unlock();
     }
+    String typeId = type + "_" + id;
+    Cloud c = new Cloud(typeId,type,value,true);
+    u.addCloud(c);
+    usedClouds.put(typeId,c);
   }
 
   /**
    * Need to add locks
+   * @param u
+   * @param id
+   * @throws InexistentCloudException
   */
-  public void freeCloud(User u, String id) {
+  public void freeCloud(User u, String id) throws InexistentCloudException {
     Map<String,Cloud> usedClouds = this.cloudMap.get(typeFromId(id));
-    usedClouds.remove(id);
+    Cloud c = null;
     try {
-      u.removeCloud(id);
+      cloudLock.lock();
+      c = usedClouds.remove(id);
     }
-    catch (InexistentCloudException e){
-      System.out.println("Cloud " + id + " doesn't exist.");
+    finally{
+      cloudLock.unlock();
     }
+    if (c == null)
+        throw new InexistentCloudException(id);
+    u.removeCloud(id);
   }
 
   /**
@@ -144,7 +178,7 @@ public class CloudAlloc {
     return u;
   }
 
-  private String typeFromId(String id){
+  private static String typeFromId(String id){
     return id.split("\\_")[0];
   }
 }

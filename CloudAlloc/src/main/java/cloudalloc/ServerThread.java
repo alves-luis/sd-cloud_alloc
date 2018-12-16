@@ -35,8 +35,12 @@ public class ServerThread implements Runnable {
   @Override
   public void run() {
     startUp();
+    terminate();
+  }
+  
+  private void terminate() {
     try {
-      out.println("Bye!");
+      out.println("Bye bye!");
       System.out.println("User disconnected with IP " + s.getRemoteSocketAddress());
       s.close();
     }
@@ -44,16 +48,11 @@ public class ServerThread implements Runnable {
       System.out.println(e.getMessage());
     }
   }
-  
-  private void terminate() {
-    // TODO
-  }
 
   private int getDecision() {
-    String input = null;
-    int r = 0;
+    int r = 0; // default decision is 0
     try {
-      input = in.readLine();
+      String input = in.readLine();
       r = Integer.parseInt(input);
     }
     catch (IOException | NumberFormatException e) {
@@ -127,14 +126,46 @@ public class ServerThread implements Runnable {
     }
   }
   
+  private void requestCloud() {
+    // TODO
+  }
+  
+  private void auctionCloud() {
+    // TODO
+  }
+  
+  private void getProfile() {
+    // TODO
+  }
+  
+  private void freeCloud() {
+    // TODO
+  }
+  
   // User has loggedIn, so do stuff, namely create a new Thread
   private void loggedIn() {
-    out.println("Bem-vindo " + u.getEmail());
+    out.println("*** Bem-vindo " + u.getEmail() + " ***");
+    out.println(Menu.mainMenu());
     int decision;
     do {
       decision = getDecision();
       switch(decision) {
-        case 0: break;
+        case 0: out.println("Goodbye " + u.getEmail() + " !");
+                u.logout();
+                break;
+        case 1: out.println(Menu.requestMenu());
+                requestCloud();
+                break;
+        case 2: out.println(Menu.auctionMenu());
+                auctionCloud();
+                break;
+        case 3: out.println(Menu.profileMenu());
+                getProfile();
+                break;
+        case 4: out.println(Menu.freeMenu());
+                freeCloud();
+                break;
+        default: break;
       }
     } while(decision != 0);
   }

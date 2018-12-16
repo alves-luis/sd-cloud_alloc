@@ -11,22 +11,37 @@ package cloudalloc;
  */
 public class Menu {
 
-
-    public static String mainMenu() {
-        return("**********************\n" +
-               "1) Pedir Servidor\n" +
-               "2) Leilão de Servidor\n" +
-               "3) Consultar dívida\n" +
-               "4) Libertar Servidor\n" +
-               "0) Sair\n" +
-               "**********************");
-    }
+  public static String mainMenu() {
+    return("**********************\n" +
+           "1) Pedir Servidor\n" +
+           "2) Leilão de Servidor\n" +
+           "3) Consultar perfil\n" +
+           "4) Libertar Servidor\n" +
+           "0) Sair\n" +
+           "**********************");
+  }
     
-    public static String loginMenu() {
-        return("******************\n" +
-               "1) Iniciar Sessão\n" +
-               "2) Registar\n" +
-               "0) Sair\n" +
-               "******************");
-    }
+  public static String loginMenu() {
+    return("******************\n" +
+           "1) Iniciar Sessão\n" +
+           "2) Registar\n" +
+           "0) Sair\n" +
+           "******************");
+  }
+
+  public static String auctionMenu() {
+    return null;
+  }
+  
+  public static String requestMenu() {
+    return null;
+  }
+  
+  public static String freeMenu() {
+    return null;
+  }
+  
+  public static String profileMenu() {
+    return null;
+  }
 }

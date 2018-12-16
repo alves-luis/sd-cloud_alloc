@@ -7,6 +7,7 @@ package cloudalloc;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  *
@@ -62,6 +63,23 @@ public class Cloud {
     public boolean isAuctioned() {
         return auctioned;
     }
+
+  @Override
+  public int hashCode() {
+    int hash = 5;
+    hash = 37 * hash + Objects.hashCode(this.id);
+    return hash;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null || obj.getClass() != this.getClass())
+      return false;
+    Cloud other = (Cloud) obj;
+    return this.id.equals(other.getId());
+  }
    
-   
+    
 }
