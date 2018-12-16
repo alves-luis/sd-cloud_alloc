@@ -37,10 +37,13 @@ public class CloudAlloc {
   /* Key -> cloudType | Value -> Map of Id->Cloud */
   private Map<String,Map<String,Cloud>> cloudMap;
   private ReentrantLock cloudLock;
-  private Condition cloudAvailable;
+  
+  /* Conditions according to type of Cloud, when it's available */
+  private Map<String,Condition> cloudsAvailable;
 
   /* Counter for no repetition of ids */
   private int nextId;
+  private ReentrantLock idLock;
 
   /* Auctions running */
   /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
@@ -63,7 +66,10 @@ public class CloudAlloc {
     for (String NAMES1 : NAMES)
       this.cloudMap.put(NAMES1, new HashMap<>());
     this.cloudLock = new ReentrantLock();
-    this.cloudAvailable = cloudLock.newCondition();
+    
+    this.cloudsAvailable = new HashMap<>();
+    for(String n : NAMES) 
+      cloudsAvailable.put(n,cloudLock.newCondition());
 
     this.auctionsMap = new HashMap<>();
     for(String NAMES1: NAMES)
@@ -72,6 +78,7 @@ public class CloudAlloc {
     this.users = new HashMap<>();
     this.userLock = new ReentrantLock();
     this.nextId = 0;
+    this.idLock = new ReentrantLock();
   }
 
   public void requestCloud(User u, String type) {
@@ -105,7 +112,7 @@ public class CloudAlloc {
         // add myself to queue, according to my value and ZZZzzzZZZ
         // this is what needs to be done
       }
-      id = this.nextId;
+      id = this.nextId++;
     }
     finally {
       cloudLock.unlock();
