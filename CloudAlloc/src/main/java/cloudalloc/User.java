@@ -82,7 +82,7 @@ public class User {
    *
    * @param c
    */
-  public void addCloud(Cloud c) {
+  public synchronized void addCloud(Cloud c) {
     this.myClouds.put(c.getId(),c);
   }
 
