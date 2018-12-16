@@ -5,8 +5,11 @@
  */
 package cloudalloc;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
@@ -21,6 +24,12 @@ public class CloudAlloc {
   private static final String[] NAMES = {"t3.micro","m5.large","r3.massive"};
   private static final double[] PRICES = {0.95,2.95,4.95};
   private static final int[] CAPACITIES = {6,8,4};
+  
+  public static List<String> getNames() {
+    List<String> r = new ArrayList<>();
+    r.addAll(Arrays.asList(NAMES));
+    return r;
+  }
 
   private final Map<String,Integer> maxCloudsPerType;
   private final Map<String,Double> nominalPricePerType;
