@@ -38,10 +38,10 @@ public class CloudAlloc {
   private Map<String,Map<String,Cloud>> cloudMap;
   private ReentrantLock cloudLock;
   private Condition cloudAvailable;
-  
+
   /* Counter for no repetition of ids */
   private int nextId;
-  
+
   /* Auctions running */
   /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
   private Map<String,Map<Double,User>> auctionsMap;
@@ -64,7 +64,7 @@ public class CloudAlloc {
       this.cloudMap.put(NAMES1, new HashMap<>());
     this.cloudLock = new ReentrantLock();
     this.cloudAvailable = cloudLock.newCondition();
-    
+
     this.auctionsMap = new HashMap<>();
     for(String NAMES1: NAMES)
       this.auctionsMap.put(NAMES1,new TreeMap<>(Comparator.reverseOrder()));
