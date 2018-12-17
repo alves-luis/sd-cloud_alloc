@@ -21,25 +21,12 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class CloudAlloc {
 
-  private static final String[] NAMES = {"t3.micro","m5.large","r3.massive"};
-  private static final double[] PRICES = {0.95,2.95,4.95};
-  private static final int[] CAPACITIES = {6,8,4};
-  
-  public static List<String> getNames() {
-    List<String> r = new ArrayList<>();
-    r.addAll(Arrays.asList(NAMES));
-    return r;
-  }
-
-  private final Map<String,Integer> maxCloudsPerType;
-  private final Map<String,Double> nominalPricePerType;
-
   /* Key -> cloudType | Value -> Map of Id->Cloud */
-  private Map<String,Map<String,Cloud>> cloudMap;
+  private final Map<String,Map<String,Cloud>> cloudMap;
   private ReentrantLock cloudLock;
   
   /* Conditions according to type of Cloud, when it's available */
-  private Map<String,Condition> cloudsAvailable;
+  private final Map<String,Condition> cloudsAvailable;
 
   /* Counter for no repetition of ids */
   private int nextId;
@@ -47,36 +34,33 @@ public class CloudAlloc {
 
   /* Auctions running */
   /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
-  private Map<String,Map<Double,User>> auctionsMap;
+  private final Map<String,Map<Double,User>> auctionsMap;
 
   /* Map of users by e-mail */
-  private Map<String,User> users;
+  private final Map<String,User> users;
   private ReentrantLock userLock;
 
   public CloudAlloc(){
-    this.maxCloudsPerType = new HashMap<>();
-    for(int i = 0; i < NAMES.length; i++)
-      this.maxCloudsPerType.put(NAMES[i],CAPACITIES[i]);
-
-    this.nominalPricePerType = new HashMap<>();
-    for(int i = 0; i < NAMES.length; i++)
-      this.nominalPricePerType.put(NAMES[i], PRICES[i]);
 
     this.cloudMap = new HashMap<>();
-    for (String NAMES1 : NAMES)
-      this.cloudMap.put(NAMES1, new HashMap<>());
+    CloudTypes.getNames().forEach((name) -> {
+      this.cloudMap.put(name, new HashMap<>());
+    });
     this.cloudLock = new ReentrantLock();
     
     this.cloudsAvailable = new HashMap<>();
-    for(String n : NAMES) 
+    CloudTypes.getNames().forEach((n) -> { 
       cloudsAvailable.put(n,cloudLock.newCondition());
+    });
 
     this.auctionsMap = new HashMap<>();
-    for(String NAMES1: NAMES)
-      this.auctionsMap.put(NAMES1,new TreeMap<>(Comparator.reverseOrder()));
+    CloudTypes.getNames().forEach((name) -> {
+      this.auctionsMap.put(name,new TreeMap<>(Comparator.reverseOrder()));
+    });
 
     this.users = new HashMap<>();
     this.userLock = new ReentrantLock();
+    
     this.nextId = 0;
     this.idLock = new ReentrantLock();
   }
@@ -87,7 +71,7 @@ public class CloudAlloc {
     try {
       cloudLock.lock();
       int currentSize = usedClouds.size();
-      if (currentSize >= this.maxCloudsPerType.get(type)) {
+      if (currentSize >= CloudTypes.maxSize(type)) {
         // wait up or try to get auctioned one
         // this is what needs to be done
       }
@@ -97,7 +81,7 @@ public class CloudAlloc {
       cloudLock.unlock();
     }
     String typeId = type + "_" + id;
-    Cloud c = new Cloud(typeId,type,this.nominalPricePerType.get(type),false);
+    Cloud c = new Cloud(typeId,type,CloudTypes.getPrice(type),false);
     u.addCloud(c);
     usedClouds.put(typeId, c);
   }
@@ -108,7 +92,7 @@ public class CloudAlloc {
     try {
       cloudLock.lock();
       int currentSize = usedClouds.size();
-      if (currentSize >= this.maxCloudsPerType.get(type)) {
+      if (currentSize >= CloudTypes.maxSize(type)) {
         // add myself to queue, according to my value and ZZZzzzZZZ
         // this is what needs to be done
       }
