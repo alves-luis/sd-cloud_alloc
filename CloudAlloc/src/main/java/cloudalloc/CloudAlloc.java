@@ -65,6 +65,7 @@ public class CloudAlloc {
     Map<String,Cloud> clouds = this.cloudMap.get(type);
     String id = type + "_" + nextId.getId();
     Cloud c = new Cloud(id,type,CloudTypes.getPrice(type),false);
+    
     try {
       cloudLock.lock();
       // if no clouds available, search for auctioned ones
@@ -77,18 +78,21 @@ public class CloudAlloc {
           }
       
       // if not found an auctioned one, go ZZZzzZZ
-      if(!foundOne){
+      if(!foundOne)
         while(clouds.size()>= CloudTypes.maxSize(type))
           try {
             this.cloudsAvailable.get(type).await();
           } catch (InterruptedException e) {}
-      }
+      
       clouds.put(type,c);
     }
     catch (InexistentCloudException e){
       System.out.println(e.getMessage());
     }
-    finally{cloudLock.unlock();}
+    finally{
+      cloudLock.unlock();
+    }
+    
     u.addCloud(c);
     return id;
   }
