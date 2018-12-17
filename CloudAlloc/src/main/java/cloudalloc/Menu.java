@@ -5,6 +5,8 @@
  */
 package cloudalloc;
 
+import java.util.List;
+
 /**
  *
  * @author Luís Alves
@@ -30,7 +32,14 @@ public class Menu {
   }
 
   public static String auctionMenu() {
-    return null;
+    StringBuilder sb = new StringBuilder();
+    sb.append("**********************\n");
+    List<String> names = CloudTypes.getNames();
+    for(int i = 1; i <= names.size(); i++) {
+      sb.append(i).append(") ").append(names.get(i-1)).append("\n");
+    }
+    sb.append("0) Sair\n").append("**********************\n");
+    return sb.toString();
   }
   
   public static String requestMenu() {

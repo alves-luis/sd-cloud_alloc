@@ -29,12 +29,12 @@ public class CloudAlloc {
   private final Map<String,Condition> cloudsAvailable;
 
   /* Counter for no repetition of ids */
-  private int nextId;
-  private ReentrantLock idLock;
+  private final Counter nextId;
 
   /* Auctions running */
   /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
-  private final Map<String,Map<Double,User>> auctionsMap;
+  private final Map<String,TreeMap<Double,User>> auctionsMap;
+  private ReentrantLock auctionLock;
 
   /* Map of users by e-mail */
   private final Map<String,User> users;
@@ -43,26 +43,22 @@ public class CloudAlloc {
   public CloudAlloc(){
 
     this.cloudMap = new HashMap<>();
-    CloudTypes.getNames().forEach((name) -> {
-      this.cloudMap.put(name, new HashMap<>());
-    });
-    this.cloudLock = new ReentrantLock();
-    
     this.cloudsAvailable = new HashMap<>();
+    this.auctionsMap = new HashMap<>();
+    this.users = new HashMap<>();
+    this.cloudLock = new ReentrantLock();
+    this.auctionLock = new ReentrantLock();
+    this.userLock = new ReentrantLock();
+    this.nextId = new Counter();
+    
     CloudTypes.getNames().forEach((n) -> { 
       cloudsAvailable.put(n,cloudLock.newCondition());
+      auctionsMap.put(n,new TreeMap<>(Comparator.reverseOrder()));
+      cloudMap.put(n, new HashMap<>());
     });
-
-    this.auctionsMap = new HashMap<>();
-    CloudTypes.getNames().forEach((name) -> {
-      this.auctionsMap.put(name,new TreeMap<>(Comparator.reverseOrder()));
-    });
-
-    this.users = new HashMap<>();
-    this.userLock = new ReentrantLock();
     
-    this.nextId = 0;
-    this.idLock = new ReentrantLock();
+
+    
   }
 
   public void requestCloud(User u, String type) {
@@ -75,7 +71,7 @@ public class CloudAlloc {
         // wait up or try to get auctioned one
         // this is what needs to be done
       }
-      id = this.nextId++;
+      id = nextId.getId();
     }
     finally {
       cloudLock.unlock();
@@ -86,25 +82,42 @@ public class CloudAlloc {
     usedClouds.put(typeId, c);
   }
 
-  public void auctionCloud(User u, String type, double value) {
+  /**
+   *
+   * @param u
+   * @param type
+   * @param value
+   * @return 
+   */
+  public String auctionCloud(User u, String type, double value) {
     Map<String,Cloud> usedClouds = this.cloudMap.get(type);
+    TreeMap<Double,User> auctionClouds = this.auctionsMap.get(type);
+    Condition cond = this.cloudsAvailable.get(type);
     int id = -1;
+    id = nextId.getId();
+    String typeId = type + "_" + id;
+    Cloud c = new Cloud(typeId,type,value,true);
+    
     try {
       cloudLock.lock();
       int currentSize = usedClouds.size();
       if (currentSize >= CloudTypes.maxSize(type)) {
-        // add myself to queue, according to my value and ZZZzzzZZZ
-        // this is what needs to be done
+        auctionClouds.put(value, u);
+        // while no clouds available and not the first in queue, go ZZZzzzZZZ
+        while (currentSize >= CloudTypes.maxSize(type) && auctionClouds.firstEntry().getValue().equals(u)) {
+          try {
+            cond.await();
+          }
+          catch (InterruptedException e) {}
+        }
       }
-      id = this.nextId++;
+      usedClouds.put(typeId,c);
     }
     finally {
       cloudLock.unlock();
     }
-    String typeId = type + "_" + id;
-    Cloud c = new Cloud(typeId,type,value,true);
     u.addCloud(c);
-    usedClouds.put(typeId,c);
+    return typeId;
   }
 
   /**
@@ -125,6 +138,15 @@ public class CloudAlloc {
     }
     if (c == null)
         throw new InexistentCloudException(id);
+    String type = c.getType();
+    Condition available = cloudsAvailable.get(type);
+    try {
+      cloudLock.lock();
+      available.signalAll();
+    }
+    finally {
+      cloudLock.unlock();
+    }
     u.removeCloud(id);
   }
 

@@ -71,6 +71,18 @@ public class ServerThread implements Runnable {
       }
     return input;
   }
+  
+  private double getDouble() {
+    double r = 0; // default double is 0;
+    try {
+      String input = in.readLine();
+      r = Double.parseDouble(input);
+    }
+    catch (IOException | NumberFormatException e) {
+      System.out.println("Error in parsing decision! " + e.getMessage());
+    }
+    return r;
+  }
 
   /** When user connects, either logs in or registers in the system */
   private void startUp() {
@@ -131,7 +143,25 @@ public class ServerThread implements Runnable {
   }
   
   private void auctionCloud() {
-    // TODO
+    int decision;
+    do {
+      out.println(Menu.auctionMenu());
+      decision = getDecision();
+      switch(decision) {
+        case 0: break;
+        default: try {
+                  String type = CloudTypes.getType(decision);
+                  out.println("Insere o valor nominal a pagar pela Cloud:");
+                  double value = getDouble();
+                  new Thread(new AuctionRequest(c,out,type,value,u)).start();
+                 }
+                 catch(InvalidTypeException e) {
+                   System.out.println("Not a valid type! " + e.getMessage());
+                 }
+                 break;
+      }
+    }
+    while (decision != 0);
   }
   
   private void getProfile() {
@@ -145,9 +175,9 @@ public class ServerThread implements Runnable {
   // User has loggedIn, so do stuff, namely create a new Thread
   private void loggedIn() {
     out.println("*** Bem-vindo " + u.getEmail() + " ***");
-    out.println(Menu.mainMenu());
     int decision;
     do {
+      out.println(Menu.mainMenu());
       decision = getDecision();
       switch(decision) {
         case 0: out.println("Goodbye " + u.getEmail() + " !");

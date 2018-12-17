@@ -50,4 +50,11 @@ public class CloudTypes {
     else
       return 0;
   }
+  
+  public static String getType(int id) throws InvalidTypeException {
+    if (id <= NAMES.length)
+      return NAMES[id-1];
+    else
+      throw new InvalidTypeException(Integer.toString(id));
+  }
 }
