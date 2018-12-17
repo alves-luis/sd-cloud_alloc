@@ -139,13 +139,29 @@ public class ServerThread implements Runnable {
   }
   
   private void requestCloud() {
-    // TODO
+    int decision;
+    do {
+      out.println(Menu.typesMenu());
+      decision = getDecision();
+      switch(decision) {
+        case 0: break;
+        default: try {
+                  String type = CloudTypes.getType(decision);
+                  new Thread(new CloudRequest(c,out,type,u)).start();
+                 }
+                 catch(InvalidTypeException e) {
+                   System.out.println("Not a valid type! " + e.getMessage());
+                 }
+                 break;
+      }
+    }
+    while (decision != 0);
   }
   
   private void auctionCloud() {
     int decision;
     do {
-      out.println(Menu.auctionMenu());
+      out.println(Menu.typesMenu());
       decision = getDecision();
       switch(decision) {
         case 0: break;
@@ -183,17 +199,13 @@ public class ServerThread implements Runnable {
         case 0: out.println("Goodbye " + u.getEmail() + " !");
                 u.logout();
                 break;
-        case 1: out.println(Menu.requestMenu());
-                requestCloud();
+        case 1: requestCloud();
                 break;
-        case 2: out.println(Menu.auctionMenu());
-                auctionCloud();
+        case 2: auctionCloud();
                 break;
-        case 3: out.println(Menu.profileMenu());
-                getProfile();
+        case 3: getProfile();
                 break;
-        case 4: out.println(Menu.freeMenu());
-                freeCloud();
+        case 4: freeCloud();
                 break;
         default: break;
       }

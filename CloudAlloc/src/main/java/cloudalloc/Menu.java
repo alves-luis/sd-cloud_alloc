@@ -31,19 +31,15 @@ public class Menu {
            "******************");
   }
 
-  public static String auctionMenu() {
+  public static String typesMenu() {
     StringBuilder sb = new StringBuilder();
     sb.append("**********************\n");
     List<String> names = CloudTypes.getNames();
     for(int i = 1; i <= names.size(); i++) {
       sb.append(i).append(") ").append(names.get(i-1)).append("\n");
     }
-    sb.append("0) Sair\n").append("**********************\n");
+    sb.append("0) Sair\n").append("**********************");
     return sb.toString();
-  }
-  
-  public static String requestMenu() {
-    return null;
   }
   
   public static String freeMenu() {

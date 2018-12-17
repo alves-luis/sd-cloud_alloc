@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -21,7 +23,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class CloudAlloc {
 
-  /* Key -> cloudType | Value -> Map of Id->Cloud */
+  /* Key -> clouds | Value -> Map of Id->Cloud */
   private final Map<String,Map<String,Cloud>> cloudMap;
   private ReentrantLock cloudLock;
   
@@ -32,7 +34,7 @@ public class CloudAlloc {
   private final Counter nextId;
 
   /* Auctions running */
-  /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
+  /* Key -> clouds | Value -> Ordered Map of Auction Value -> User who made it */
   private final Map<String,TreeMap<Double,User>> auctionsMap;
   private ReentrantLock auctionLock;
 
@@ -56,30 +58,39 @@ public class CloudAlloc {
       auctionsMap.put(n,new TreeMap<>(Comparator.reverseOrder()));
       cloudMap.put(n, new HashMap<>());
     });
-    
-
-    
   }
 
-  public void requestCloud(User u, String type) {
-    Map<String,Cloud> usedClouds = this.cloudMap.get(type);
-    int id = -1;
+  public String requestCloud(User u, String type){
+    boolean foundOne = false;
+    Map<String,Cloud> clouds = this.cloudMap.get(type);
+    String id = type + "_" + nextId.getId();
+    Cloud c = new Cloud(id,type,CloudTypes.getPrice(type),false);
     try {
       cloudLock.lock();
-      int currentSize = usedClouds.size();
-      if (currentSize >= CloudTypes.maxSize(type)) {
-        // wait up or try to get auctioned one
-        // this is what needs to be done
+      // if no clouds available, search for auctioned ones
+      if(clouds.size()>= CloudTypes.maxSize(type))
+        for (Cloud d: clouds.values())
+          if (d.isAuctioned()){
+            this.freeCloud(null,d.getId());
+            foundOne=true;
+            break;
+          }
+      
+      // if not found an auctioned one, go ZZZzzZZ
+      if(!foundOne){
+        while(clouds.size()>= CloudTypes.maxSize(type))
+          try {
+            this.cloudsAvailable.get(type).await();
+          } catch (InterruptedException e) {}
       }
-      id = nextId.getId();
+      clouds.put(type,c);
     }
-    finally {
-      cloudLock.unlock();
+    catch (InexistentCloudException e){
+      System.out.println(e.getMessage());
     }
-    String typeId = type + "_" + id;
-    Cloud c = new Cloud(typeId,type,CloudTypes.getPrice(type),false);
+    finally{cloudLock.unlock();}
     u.addCloud(c);
-    usedClouds.put(typeId, c);
+    return id;
   }
 
   /**
@@ -87,14 +98,13 @@ public class CloudAlloc {
    * @param u
    * @param type
    * @param value
-   * @return 
+   * @return Id of the Cloud who was auctioned
    */
   public String auctionCloud(User u, String type, double value) {
     Map<String,Cloud> usedClouds = this.cloudMap.get(type);
     TreeMap<Double,User> auctionClouds = this.auctionsMap.get(type);
     Condition cond = this.cloudsAvailable.get(type);
-    int id = -1;
-    id = nextId.getId();
+    int id = nextId.getId();
     String typeId = type + "_" + id;
     Cloud c = new Cloud(typeId,type,value,true);
     
@@ -112,6 +122,7 @@ public class CloudAlloc {
         }
       }
       usedClouds.put(typeId,c);
+      auctionClouds.remove(value,u);
     }
     finally {
       cloudLock.unlock();

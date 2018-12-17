@@ -15,7 +15,7 @@ import java.util.Map;
  * This class defines the constants of our CloudAlloc
  * 
  */
-public class CloudTypes {
+public final class CloudTypes {
   
   private static final String[] NAMES = {"t3.micro","m5.large","r3.massive"};
   private static final double[] PRICES = {0.95,2.95,4.95};
