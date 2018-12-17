@@ -13,11 +13,11 @@ import java.io.PrintWriter;
  */
 public class AuctionRequest implements Runnable {
   
-  private CloudAlloc c;
-  private PrintWriter out;
-  private double value;
-  private User user;
-  private String type;
+  private final CloudAlloc c;
+  private final PrintWriter out;
+  private final double value;
+  private final User user;
+  private final String type;
 
 
   public AuctionRequest(CloudAlloc c, PrintWriter out, String type, double d, User u) {

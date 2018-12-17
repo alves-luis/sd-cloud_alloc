@@ -11,7 +11,7 @@ import java.net.Socket;
 
 /**
  *
- * @author Luís Alves
+ * @author O Grupo
  */
 public class Server {
     public static void main(String[] args) {
