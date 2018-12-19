@@ -29,6 +29,7 @@ public class CloudRequest implements Runnable {
   public void run(){
     String id = c.requestCloud(u, type);
     out.println("Querido utilizador "+u.getEmail()+" já tem a sua cloud! O seu ID é "+id);
+    new Thread(new FreeCloudListener(u,out,id)).start();
   }
   
 }

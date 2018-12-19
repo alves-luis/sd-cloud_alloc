@@ -5,8 +5,11 @@
  */
 package cloudalloc;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  *
@@ -18,6 +21,8 @@ public class User {
   private String password;
   private Map<String,Cloud> myClouds;
   private boolean loggedIn;
+  private ReentrantLock lock;
+  private Map<String,Condition> cloudExists; // associate a condition with each cloud
 
   /**
    *
@@ -29,6 +34,8 @@ public class User {
     this.password = pass;
     this.myClouds = new HashMap<>();
     this.loggedIn = true;
+    this.lock = new ReentrantLock();
+    this.cloudExists = new HashMap<>();
   }
 
   /**
@@ -84,6 +91,7 @@ public class User {
    */
   public synchronized void addCloud(Cloud c) {
     this.myClouds.put(c.getId(),c);
+    this.cloudExists.put(c.getId(),lock.newCondition());
   }
 
   /**
@@ -91,19 +99,49 @@ public class User {
    * @param id
    * @throws InexistentCloudException
    */
-  public void removeCloud(String id) throws InexistentCloudException {
+  public synchronized void removeCloud(String id) throws InexistentCloudException {
     Cloud c = this.myClouds.get(id);
     if (c == null)
       throw new InexistentCloudException(id);
     this.myClouds.remove(id);
+    this.cloudExists.get(id).signal();
+    this.cloudExists.remove(id);
+  }
+  
+  /**
+   * This method puts the thread to sleep if it does not own the Cloud
+   * @param id
+   * @return
+   */
+  public boolean ownsCloud(String id) {
+    try {
+      this.lock.lock();
+      while ((this.myClouds.get(id)) != null)
+        try {
+          this.cloudExists.get(id).await();
+        }
+      catch (InterruptedException e) {};
+      return false;
+    }
+    finally {
+      lock.unlock();
+    }
   }
 
   /**
    *
    * @return
    */
-  public double getTotalDebt() {
+  public synchronized double getTotalDebt() {
     return this.myClouds.values().stream().mapToDouble(c -> c.getAmmountToPay()).sum();
+  }
+  
+  public double getDebt(String id) {
+    Cloud c = this.myClouds.get(id);
+    if (c == null)
+      return 0;
+    else
+      return c.getAmmountToPay();
   }
 
 }
