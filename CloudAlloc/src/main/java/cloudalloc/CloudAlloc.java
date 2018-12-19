@@ -84,9 +84,9 @@ public class CloudAlloc {
             this.cloudsAvailable.get(type).await();
           } catch (InterruptedException e) {}
       
-      clouds.put(type,c);
+      clouds.put(id,c);
     }
-    catch (InexistentCloudException e){
+    catch (InexistentCloudException | UserDoesNotOwnCloudException e){
       System.out.println(e.getMessage());
     }
     finally{
@@ -140,13 +140,14 @@ public class CloudAlloc {
    * @param u
    * @param id
    * @throws InexistentCloudException
+   * @throws cloudalloc.UserDoesNotOwnCloudException
   */
-  public void freeCloud(User u, String id) throws InexistentCloudException {
+  public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException {
     Map<String,Cloud> usedClouds = this.cloudMap.get(typeFromId(id));
     Cloud c = null;
     try {
       cloudLock.lock();
-      c = usedClouds.remove(id);
+      c = usedClouds.get(id);
     }
     finally{
       cloudLock.unlock();
@@ -157,12 +158,16 @@ public class CloudAlloc {
     Condition available = cloudsAvailable.get(type);
     try {
       cloudLock.lock();
+      if (u != null && !u.isMyCloud(id)) // if not system and does not own cloud, throw exception
+        throw new UserDoesNotOwnCloudException(id);
+      usedClouds.remove(id);
       available.signalAll();
     }
     finally {
       cloudLock.unlock();
     }
-    u.removeCloud(id);
+    if (u != null) // if not system freeing, remove from user
+      u.removeCloud(id);
   }
 
   /**

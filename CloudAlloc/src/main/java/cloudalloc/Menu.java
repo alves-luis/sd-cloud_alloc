@@ -42,8 +42,13 @@ public class Menu {
     return sb.toString();
   }
   
-  public static String freeMenu() {
-    return null;
+  public static String freeMenu(User u) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("**********************\n").append("0) Sair\n").append("Clouds disponíveis para libertar:\n");
+    for(String id : u.getCloudsId())
+      sb.append(id).append("\n");
+    sb.append("Insira o ID da Cloud que deseja libertar:\n").append("**********************");
+    return sb.toString();
   }
   
   public static String profileMenu() {

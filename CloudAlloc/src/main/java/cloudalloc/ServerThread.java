@@ -140,13 +140,16 @@ public class ServerThread implements Runnable {
   
   private void requestCloud() {
     int decision;
+    boolean valid = false;
     do {
       out.println(Menu.typesMenu());
       decision = getDecision();
       switch(decision) {
-        case 0: break;
+        case 0: valid = true;
+                break;
         default: try {
                   String type = CloudTypes.getType(decision);
+                  valid = true;
                   new Thread(new CloudRequest(c,out,type,u)).start();
                  }
                  catch(InvalidTypeException e) {
@@ -155,18 +158,21 @@ public class ServerThread implements Runnable {
                  break;
       }
     }
-    while (decision != 0);
+    while (decision != 0 && !valid);
   }
   
   private void auctionCloud() {
     int decision;
+    boolean valid = false;
     do {
       out.println(Menu.typesMenu());
       decision = getDecision();
       switch(decision) {
-        case 0: break;
+        case 0: valid = true;
+                break;
         default: try {
                   String type = CloudTypes.getType(decision);
+                  valid = true;
                   out.println("Insere o valor nominal a pagar pela Cloud:");
                   double value = getDouble();
                   new Thread(new AuctionRequest(c,out,type,value,u)).start();
@@ -177,7 +183,7 @@ public class ServerThread implements Runnable {
                  break;
       }
     }
-    while (decision != 0);
+    while (decision != 0 && !valid);
   }
   
   private void getProfile() {
@@ -185,7 +191,26 @@ public class ServerThread implements Runnable {
   }
   
   private void freeCloud() {
-    // TODO
+    String decision;
+    boolean valid = false;
+    do {
+      out.println(Menu.freeMenu(u));
+      decision = getString();
+      if (decision != null && !decision.equals("0")) {
+        valid = true;
+        try {
+          c.freeCloud(u, decision);
+        }
+        catch (InexistentCloudException e) {
+          out.println("A Cloud que pretendes libertar não existe!");
+        }
+        catch (UserDoesNotOwnCloudException e) {
+          out.println("A Cloud que pretendes libertar não te pertence!");
+        }
+      }
+    }
+    while (decision != null && !decision.equals("0") && !valid);
+    
   }
   
   // User has loggedIn, so do stuff, namely create a new Thread

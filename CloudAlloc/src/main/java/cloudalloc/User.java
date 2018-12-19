@@ -7,9 +7,11 @@ package cloudalloc;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -104,7 +106,13 @@ public class User {
     if (c == null)
       throw new InexistentCloudException(id);
     this.myClouds.remove(id);
-    this.cloudExists.get(id).signal();
+    try {
+      this.lock.lock();
+      this.cloudExists.get(id).signal();
+    }
+    finally {
+      this.lock.unlock();
+    }
     this.cloudExists.remove(id);
   }
   
@@ -127,6 +135,10 @@ public class User {
       lock.unlock();
     }
   }
+  
+  public synchronized boolean isMyCloud(String id) {
+    return this.myClouds.containsKey(id);
+  }
 
   /**
    *
@@ -142,6 +154,10 @@ public class User {
       return 0;
     else
       return c.getAmmountToPay();
+  }
+  
+  public synchronized List<String> getCloudsId() {
+    return this.myClouds.keySet().stream().collect(Collectors.toList());
   }
 
 }
