@@ -101,7 +101,8 @@ public class CloudAlloc {
   }
 
   /**
-   *
+   * This method, given a type of Cloud, User who requests and a value, requests a Cloud
+   * If no Clouds available, place in queue based on value (higher the value, sooner the Cloud given)
    * @param u
    * @param type
    * @param value
