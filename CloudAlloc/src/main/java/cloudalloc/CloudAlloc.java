@@ -140,11 +140,11 @@ public class CloudAlloc {
   }
 
   /**
-   * Need to add locks
-   * @param u
-   * @param id
-   * @throws InexistentCloudException
-   * @throws cloudalloc.UserDoesNotOwnCloudException
+   * This method clears a Cloud. If User is null, that means that is the system freeing a Cloud
+   * @param u User who wants to free the cloud
+   * @param id id of the cloud that will be freed
+   * @throws InexistentCloudException if tried to free a Cloud that does not exist in the system
+   * @throws UserDoesNotOwnCloudException if user who tried to free the Cloud does not own it
   */
   public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException{
     Map<String,Cloud> usedClouds = this.cloudMap.get(typeFromId(id));
