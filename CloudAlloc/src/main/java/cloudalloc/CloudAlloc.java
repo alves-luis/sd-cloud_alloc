@@ -25,6 +25,7 @@ public class CloudAlloc {
 
   /* Key -> clouds | Value -> Map of Id->Cloud */
   private final Map<String,Map<String,Cloud>> cloudMap;
+  private final Map<String,User> userByCloudId;
   private ReentrantLock cloudLock;
   
   /* Conditions according to type of Cloud, when it's available */
@@ -45,6 +46,7 @@ public class CloudAlloc {
   public CloudAlloc(){
 
     this.cloudMap = new HashMap<>();
+    this.userByCloudId = new HashMap<>();
     this.cloudsAvailable = new HashMap<>();
     this.auctionsMap = new HashMap<>();
     this.users = new HashMap<>();
@@ -85,6 +87,7 @@ public class CloudAlloc {
           } catch (InterruptedException e) {}
       
       clouds.put(id,c);
+      this.userByCloudId.put(id, u);
     }
     catch (InexistentCloudException | UserDoesNotOwnCloudException e){
       System.out.println(e.getMessage());
@@ -114,11 +117,11 @@ public class CloudAlloc {
     
     try {
       cloudLock.lock();
-      int currentSize = usedClouds.size();
-      if (currentSize >= CloudTypes.maxSize(type)) {
+      
+      if (usedClouds.size() >= CloudTypes.maxSize(type)) {
         auctionClouds.put(value, u);
         // while no clouds available and not the first in queue, go ZZZzzzZZZ
-        while (currentSize >= CloudTypes.maxSize(type) && auctionClouds.firstEntry().getValue().equals(u)) {
+        while (usedClouds.size() >= CloudTypes.maxSize(type) && auctionClouds.firstEntry().getValue().equals(u)) {
           try {
             cond.await();
           }
@@ -126,6 +129,7 @@ public class CloudAlloc {
         }
       }
       usedClouds.put(typeId,c);
+      this.userByCloudId.put(typeId,u);
       auctionClouds.remove(value,u);
     }
     finally {
@@ -142,9 +146,12 @@ public class CloudAlloc {
    * @throws InexistentCloudException
    * @throws cloudalloc.UserDoesNotOwnCloudException
   */
-  public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException {
+  public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException{
     Map<String,Cloud> usedClouds = this.cloudMap.get(typeFromId(id));
+    if (usedClouds == null)
+      throw new InexistentCloudException(typeFromId(id));
     Cloud c = null;
+    User owner = null;
     try {
       cloudLock.lock();
       c = usedClouds.get(id);
@@ -154,6 +161,7 @@ public class CloudAlloc {
     }
     if (c == null)
         throw new InexistentCloudException(id);
+    
     String type = c.getType();
     Condition available = cloudsAvailable.get(type);
     try {
@@ -161,6 +169,7 @@ public class CloudAlloc {
       if (u != null && !u.isMyCloud(id)) // if not system and does not own cloud, throw exception
         throw new UserDoesNotOwnCloudException(id);
       usedClouds.remove(id);
+      owner = this.userByCloudId.remove(id);
       available.signalAll();
     }
     finally {
@@ -168,6 +177,8 @@ public class CloudAlloc {
     }
     if (u != null) // if not system freeing, remove from user
       u.removeCloud(id);
+    else if (owner != null) // if system freeing, owner removes cloud
+          owner.removeCloud(id);
   }
 
   /**
@@ -221,6 +232,9 @@ public class CloudAlloc {
   }
 
   private static String typeFromId(String id){
-    return id.split("\\_")[0];
+    if (id != null)
+      return id.split("\\_")[0];
+    else 
+      return null;
   }
 }
