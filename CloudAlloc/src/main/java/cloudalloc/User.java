@@ -108,7 +108,7 @@ public class User {
     this.myClouds.remove(id);
     try {
       this.lock.lock();
-      this.cloudExists.get(id).signal();
+      this.cloudExists.get(id).signal(); // sends notification that cloud is longer yours
     }
     finally {
       this.lock.unlock();

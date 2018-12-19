@@ -110,7 +110,7 @@ public class CloudAlloc {
   public String auctionCloud(User u, String type, double value) {
     Map<String,Cloud> usedClouds = this.cloudMap.get(type);
     TreeMap<Double,User> auctionClouds = this.auctionsMap.get(type);
-    Condition cond = this.cloudsAvailable.get(type);
+    Condition available = this.cloudsAvailable.get(type);
     int id = nextId.getId();
     String typeId = type + "_" + id;
     Cloud c = new Cloud(typeId,type,value,true);
@@ -121,9 +121,9 @@ public class CloudAlloc {
       if (usedClouds.size() >= CloudTypes.maxSize(type)) {
         auctionClouds.put(value, u);
         // while no clouds available and not the first in queue, go ZZZzzzZZZ
-        while (usedClouds.size() >= CloudTypes.maxSize(type) && auctionClouds.firstEntry().getValue().equals(u)) {
+        while (usedClouds.size() >= CloudTypes.maxSize(type) || !(auctionClouds.firstEntry().getValue().equals(u) && auctionClouds.firstEntry().getKey().equals(value))) {
           try {
-            cond.await();
+            available.await();
           }
           catch (InterruptedException e) {}
         }
