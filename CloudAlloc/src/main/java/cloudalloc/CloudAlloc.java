@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package cloudalloc;
 
 import java.util.Comparator;
@@ -113,6 +108,7 @@ public class CloudAlloc {
     
     try {
       cloudLock.lock();
+      auctionLock.lock();
       
       if (usedClouds.size() >= CloudTypes.maxSize(type)) {
         auctionClouds.put(value, u);
@@ -129,6 +125,7 @@ public class CloudAlloc {
       auctionClouds.remove(value,u);
     }
     finally {
+      auctionLock.unlock();
       cloudLock.unlock();
     }
     u.addCloud(c);
@@ -162,6 +159,7 @@ public class CloudAlloc {
     String type = c.getType();
     Condition available = cloudsAvailable.get(type);
     cost = c.getAmmountToPay();
+    
     try {
       cloudLock.lock();
       if (u != null && !u.isMyCloud(id)) // if not system and does not own cloud, throw exception

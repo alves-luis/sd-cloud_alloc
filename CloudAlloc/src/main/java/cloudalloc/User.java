@@ -161,7 +161,7 @@ public class User {
     this.log.writeMessage(msg);
   }
   
-  public synchronized String readMessage() {
+  public String readMessage() {
     if (loggedIn)
       return log.readMessage();
     else
