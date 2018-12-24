@@ -25,6 +25,8 @@ public class User {
   private boolean loggedIn;
   private ReentrantLock lock;
   private Map<String,Condition> cloudExists; // associate a condition with each cloud
+  private MessageLog log;
+  private double debt;
 
   /**
    *
@@ -38,6 +40,8 @@ public class User {
     this.loggedIn = true;
     this.lock = new ReentrantLock();
     this.cloudExists = new HashMap<>();
+    this.log = new MessageLog();
+    this.debt = 0;
   }
 
   /**
@@ -86,6 +90,10 @@ public class User {
     if (canLogout) this.loggedIn = false;
     return canLogout;
   }
+  
+  public synchronized boolean isLoggedIn() {
+    return loggedIn;
+  }
 
   /**
    *
@@ -114,26 +122,7 @@ public class User {
       this.lock.unlock();
     }
     this.cloudExists.remove(id);
-  }
-  
-  /**
-   * This method puts the thread to sleep if it does not own the Cloud
-   * @param id
-   * @return
-   */
-  public boolean ownsCloud(String id) {
-    try {
-      this.lock.lock();
-      while ((this.myClouds.get(id)) != null)
-        try {
-          this.cloudExists.get(id).await();
-        }
-      catch (InterruptedException e) {};
-      return false;
-    }
-    finally {
-      lock.unlock();
-    }
+    debt += c.getAmmountToPay();
   }
   
   public synchronized boolean isMyCloud(String id) {
@@ -156,8 +145,27 @@ public class User {
       return c.getAmmountToPay();
   }
   
+  public double getDebt() {
+    return this.debt;
+  }
+  
   public synchronized List<String> getCloudsId() {
     return this.myClouds.keySet().stream().collect(Collectors.toList());
+  }
+  
+  public MessageLog getLog() {
+    return this.log;
+  }
+  
+  public void addMsg(String msg) {
+    this.log.writeMessage(msg);
+  }
+  
+  public synchronized String readMessage() {
+    if (loggedIn)
+      return log.readMessage();
+    else
+      return null;
   }
 
 }

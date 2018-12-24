@@ -70,7 +70,7 @@ public class CloudAlloc {
         for (Cloud d: clouds.values())
           if (d.isAuctioned()){
             this.freeCloud(null,d.getId());
-            foundOne=true;
+            foundOne = true;
             break;
           }
       
@@ -144,6 +144,7 @@ public class CloudAlloc {
   */
   public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException{
     Map<String,Cloud> usedClouds = this.cloudMap.get(typeFromId(id));
+    double cost = 0;
     if (usedClouds == null)
       throw new InexistentCloudException(typeFromId(id));
     Cloud c = null;
@@ -160,6 +161,7 @@ public class CloudAlloc {
     
     String type = c.getType();
     Condition available = cloudsAvailable.get(type);
+    cost = c.getAmmountToPay();
     try {
       cloudLock.lock();
       if (u != null && !u.isMyCloud(id)) // if not system and does not own cloud, throw exception
@@ -171,10 +173,14 @@ public class CloudAlloc {
     finally {
       cloudLock.unlock();
     }
-    if (u != null) // if not system freeing, remove from user
+    if (u != null) {// if not system freeing, remove from user
       u.removeCloud(id);
-    else if (owner != null) // if system freeing, owner removes cloud
+      u.addMsg("A tua Cloud de id " + id + " foi libertada! Custo da Cloud: " + cost);
+    }
+    else if (owner != null) {// if system freeing, owner removes cloud
           owner.removeCloud(id);
+          owner.addMsg("A tua Cloud de id " + id + " foi libertada! Custo da Cloud: " + cost);
+         }
   }
 
   /**

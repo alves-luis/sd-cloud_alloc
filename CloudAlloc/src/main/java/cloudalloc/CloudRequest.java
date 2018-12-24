@@ -28,8 +28,7 @@ public class CloudRequest implements Runnable {
   @Override
   public void run(){
     String id = c.requestCloud(u, type);
-    out.println("Reserva do tipo " + type + " concluída! Id: " + id);
-    new Thread(new FreeCloudListener(u,out,id)).start();
+    u.addMsg("Reserva do tipo " + type + " concluída! Id: " + id);
   }
   
 }

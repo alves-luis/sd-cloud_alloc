@@ -109,6 +109,7 @@ public class ServerThread implements Runnable {
     try {
       this.u = c.registerUser(email, pass);
       System.out.println("User with IP " + s.getRemoteSocketAddress() + " registered with e-mail " + email);
+      new Thread(new NotificationCenter(u,out,s)).start();
       loggedIn();
     }
     catch (EmailNotUniqueException e) {
@@ -126,6 +127,7 @@ public class ServerThread implements Runnable {
     try {
       this.u = c.loginUser(email, pass);
       System.out.println("User with IP " + s.getRemoteSocketAddress() + " logged in with e-mail " + email);
+      new Thread(new NotificationCenter(u,out,s)).start();
       loggedIn();
     }
     catch (InexistentUserException e) {

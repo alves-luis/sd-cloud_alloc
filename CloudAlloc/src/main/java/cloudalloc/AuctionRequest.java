@@ -31,8 +31,7 @@ public class AuctionRequest implements Runnable {
   @Override
   public void run() {
     String id = c.auctionCloud(user, type, value);
-    out.println("Reserva do tipo " + type + " concluída! Id: " + id + " . Valor: " + value);
-    new Thread(new FreeCloudListener(user,out,id)).start();
+    user.addMsg("Reserva do tipo " + type + " concluída! Id: " + id + " . Valor: " + value);
   }
   
 }
