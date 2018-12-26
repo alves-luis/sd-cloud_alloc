@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package cloudalloc;
 
 import java.time.Duration;
@@ -11,58 +6,42 @@ import java.util.Objects;
 
 /**
  *
- * @author rafaelarodrigues
+ * @author O Grupo
  */
 public class Cloud {
-    
-    private String id;
-    private String type;
-    private double nominalPrice;
-    private LocalDateTime requestDate;
-    private boolean auctioned;
-    
-   public Cloud (String i, String t,double np, boolean flag){
-       this.id = i;
-       this.type = t;
-       this.nominalPrice = np;
-       this.requestDate = LocalDateTime.now();
-       this.auctioned = flag;
-   }
 
-    public String getId() {
-        return id;
-    }
+  private String id;
+  private String type;
+  private double nominalPrice;
+  private LocalDateTime requestDate;
+  private boolean auctioned;
 
-    public void setId(String id) {
-        this.id = id;
-    }
+  public Cloud(String i, String t, double np, boolean flag) {
+    this.id = i;
+    this.type = t;
+    this.nominalPrice = np;
+    this.requestDate = LocalDateTime.now();
+    this.auctioned = flag;
+  }
 
-    public String getType() {
-        return type;
-    }
+  public String getId() {
+    return id;
+  }
 
-    public void setType(String type) {
-        this.type = type;
-    }
+  public String getType() {
+    return type;
+  }
 
-    public double getNominalPrice() {
-        return nominalPrice;
-    }
+  public double getAmmountToPay() {
+    Duration dur = Duration.between(requestDate, LocalDateTime.now());
+    long minutes = dur.toMinutes();
+    double ammount = (minutes * nominalPrice) / 60;
+    return ammount;
+  }
 
-    public void setNominalPrice(double nominalPrice) {
-        this.nominalPrice = nominalPrice;
-    }
-    
-    public double getAmmountToPay() {
-        Duration dur = Duration.between(requestDate,LocalDateTime.now());
-        long minutes = dur.toMinutes();
-        double ammount = (minutes*nominalPrice) / 60;
-        return ammount;
-    }
-    
-    public boolean isAuctioned() {
-        return auctioned;
-    }
+  public boolean isAuctioned() {
+    return auctioned;
+  }
 
   @Override
   public int hashCode() {
@@ -73,13 +52,14 @@ public class Cloud {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj)
+    if (this == obj) {
       return true;
-    if (obj == null || obj.getClass() != this.getClass())
+    }
+    if (obj == null || obj.getClass() != this.getClass()) {
       return false;
+    }
     Cloud other = (Cloud) obj;
     return this.id.equals(other.getId());
   }
-   
-    
+
 }

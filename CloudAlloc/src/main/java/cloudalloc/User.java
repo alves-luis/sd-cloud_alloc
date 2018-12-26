@@ -1,21 +1,14 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package cloudalloc;
 
-import java.io.IOException;
+import exceptions.InexistentCloudException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
  *
- * @author grupo
+ * @author O Grupo
  */
 public class User {
 
@@ -23,8 +16,6 @@ public class User {
   private String password;
   private Map<String,Cloud> myClouds;
   private boolean loggedIn;
-  private ReentrantLock lock;
-  private Map<String,Condition> cloudExists; // associate a condition with each cloud
   private MessageLog log;
   private double debt;
 
@@ -38,47 +29,24 @@ public class User {
     this.password = pass;
     this.myClouds = new HashMap<>();
     this.loggedIn = true;
-    this.lock = new ReentrantLock();
-    this.cloudExists = new HashMap<>();
     this.log = new MessageLog();
     this.debt = 0;
   }
-
-  /**
-   *
-   * @return
-   */
+  
   public String getEmail() {
-    return email;
+    return this.email;
   }
 
   /**
-   *
-   * @param email
-   */
-  public void setEmail(String email) {
-    this.email = email;
-  }
-
-  /**
-   *
-   * @param password
-   */
-  public void setPassword(String password) {
-    this.password = password;
-  }
-
-  // Only one person can login
-
-  /**
-   *
+   * Returns whether login was successful or not
    * @param pass
    * @return
    */
   public synchronized boolean login (String pass) {
-    boolean canLogin = !loggedIn;
-    loggedIn = this.password.equals(pass) && canLogin;
-    return loggedIn;
+    boolean canLogin = !loggedIn && this.password.equals(pass);
+    if (canLogin)
+      loggedIn = true;
+    return canLogin;
   }
 
   /**
@@ -87,25 +55,29 @@ public class User {
    */
   public synchronized boolean logout() {
     boolean canLogout = this.loggedIn;
-    if (canLogout) this.loggedIn = false;
+    if (canLogout) 
+      this.loggedIn = false;
     return canLogout;
   }
   
+  /**
+   * Returns the status of the user
+   * @return
+   */
   public synchronized boolean isLoggedIn() {
     return loggedIn;
   }
 
   /**
-   *
+   * Adds a Cloud to a User
    * @param c
    */
   public synchronized void addCloud(Cloud c) {
     this.myClouds.put(c.getId(),c);
-    this.cloudExists.put(c.getId(),lock.newCondition());
   }
 
   /**
-   *
+   * Given an Id, removes the Cloud from this User
    * @param id
    * @throws InexistentCloudException
    */
@@ -114,30 +86,32 @@ public class User {
     if (c == null)
       throw new InexistentCloudException(id);
     this.myClouds.remove(id);
-    try {
-      this.lock.lock();
-      this.cloudExists.get(id).signal(); // sends notification that cloud is longer yours
-    }
-    finally {
-      this.lock.unlock();
-    }
-    this.cloudExists.remove(id);
     debt += c.getAmmountToPay();
   }
   
+  /**
+   * Given an id, returns if the cloud belongs to this user
+   * @param id
+   * @return
+   */
   public synchronized boolean isMyCloud(String id) {
     return this.myClouds.containsKey(id);
   }
 
   /**
-   *
+   * Returns the current debt of running clouds
    * @return
    */
   public synchronized double getTotalDebt() {
     return this.myClouds.values().stream().mapToDouble(c -> c.getAmmountToPay()).sum();
   }
   
-  public double getDebt(String id) {
+  /**
+   * Given an Id of a Cloud, returns the amount of money it cost until now
+   * @param id
+   * @return
+   */
+  public synchronized double getDebt(String id) {
     Cloud c = this.myClouds.get(id);
     if (c == null)
       return 0;
@@ -145,22 +119,42 @@ public class User {
       return c.getAmmountToPay();
   }
   
+  /**
+   * Returns cost of removed clouds
+   * @return
+   */
   public double getDebt() {
     return this.debt;
   }
   
+  /**
+   * Returns the Ids of Clouds this users owns
+   * @return
+   */
   public synchronized List<String> getCloudsId() {
     return this.myClouds.keySet().stream().collect(Collectors.toList());
   }
   
+  /**
+   * Returns this user's MessageLog
+   * @return
+   */
   public MessageLog getLog() {
     return this.log;
   }
   
+  /**
+   * Adds a message to this user Log
+   * @param msg
+   */
   public void addMsg(String msg) {
     this.log.writeMessage(msg);
   }
   
+  /**
+   * Returns a new message if available, or null if no new messages
+   * @return
+   */
   public String readMessage() {
     if (loggedIn)
       return log.readMessage();

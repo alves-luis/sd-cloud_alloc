@@ -1,5 +1,10 @@
 package cloudalloc;
 
+import exceptions.FailedLoginException;
+import exceptions.UserDoesNotOwnCloudException;
+import exceptions.InexistentCloudException;
+import exceptions.EmailNotUniqueException;
+import exceptions.InexistentUserException;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,27 +18,29 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class CloudAlloc {
 
-  /* Key -> clouds | Value -> Map of Id->Cloud */
-  private final Map<String,Map<String,Cloud>> cloudMap;
-  private final Map<String,User> userByCloudId;
+  /* Key -> cloudType | Value -> Map of Id->Cloud */
+  private final Map<String, Map<String, Cloud>> cloudMap;
+  /* Key -> Id of Cloud | Value -> User that owns it */
+  private final Map<String, User> userByCloudId;
+  /* Lock to be used with CloudMaps */
   private ReentrantLock cloudLock;
-  
-  /* Conditions according to type of Cloud, when it's available */
-  private final Map<String,Condition> cloudsAvailable;
+
+  /* Conditions according to type of Cloud, when one becomes available */
+  private final Map<String, Condition> cloudsAvailable;
 
   /* Counter for no repetition of ids */
   private final Counter nextId;
 
   /* Auctions running */
-  /* Key -> clouds | Value -> Ordered Map of Auction Value -> User who made it */
-  private final Map<String,TreeMap<Double,User>> auctionsMap;
-  private ReentrantLock auctionLock;
+  /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
+  private final Map<String, TreeMap<Double, User>> auctionsMap;
 
   /* Map of users by e-mail */
-  private final Map<String,User> users;
+  private final Map<String, User> users;
+  /* Lock to be used with UserMap */
   private ReentrantLock userLock;
 
-  public CloudAlloc(){
+  public CloudAlloc() {
 
     this.cloudMap = new HashMap<>();
     this.userByCloudId = new HashMap<>();
@@ -41,150 +48,172 @@ public class CloudAlloc {
     this.auctionsMap = new HashMap<>();
     this.users = new HashMap<>();
     this.cloudLock = new ReentrantLock();
-    this.auctionLock = new ReentrantLock();
     this.userLock = new ReentrantLock();
     this.nextId = new Counter();
-    
-    CloudTypes.getNames().forEach((n) -> { 
-      cloudsAvailable.put(n,cloudLock.newCondition());
-      auctionsMap.put(n,new TreeMap<>(Comparator.reverseOrder()));
+
+    // add a new condition, auction TreeMap and CloudMap per CloudType
+    CloudTypes.getNames().forEach((n) -> {
+      cloudsAvailable.put(n, cloudLock.newCondition());
+      auctionsMap.put(n, new TreeMap<>(Comparator.reverseOrder()));
       cloudMap.put(n, new HashMap<>());
     });
   }
 
-  public String requestCloud(User u, String type){
+  /**
+   * Given a User and a type of Cloud, returns the ID of the Cloud who was given
+   * to that User
+   * @param u
+   * @param type
+   * @return ID of the Cloud
+   */
+  public String requestCloud(User u, String type) {
     boolean foundOne = false;
-    Map<String,Cloud> clouds = this.cloudMap.get(type);
+    Map<String, Cloud> clouds = this.cloudMap.get(type);
     String id = type + "_" + nextId.getId();
-    Cloud c = new Cloud(id,type,CloudTypes.getPrice(type),false);
-    
+    Cloud c = new Cloud(id, type, CloudTypes.getPrice(type), false);
+
     try {
       cloudLock.lock();
       // if no clouds available, search for auctioned ones
-      if(clouds.size()>= CloudTypes.maxSize(type))
-        for (Cloud d: clouds.values())
-          if (d.isAuctioned()){
-            this.freeCloud(null,d.getId());
+      if (clouds.size() >= CloudTypes.maxSize(type)) {
+        for (Cloud d : clouds.values()) {
+          if (d.isAuctioned()) {
+            this.freeCloud(null, d.getId()); // found one, so free it
             foundOne = true;
             break;
           }
-      
-      // if not found an auctioned one, go ZZZzzZZ
-      if(!foundOne)
-        while(clouds.size()>= CloudTypes.maxSize(type))
+        }
+      }
+
+      // if not found an auctioned one, go ZZZzzZZ while no Clouds available
+      if (!foundOne) {
+        while (clouds.size() >= CloudTypes.maxSize(type)) {
           try {
             this.cloudsAvailable.get(type).await();
           } catch (InterruptedException e) {}
-      
-      clouds.put(id,c);
+        }
+      }
+
+      // Got a spot, so add to CloudMaps
+      clouds.put(id, c);
       this.userByCloudId.put(id, u);
-    }
-    catch (InexistentCloudException | UserDoesNotOwnCloudException e){
+      
+    } catch (InexistentCloudException | UserDoesNotOwnCloudException e) {
       System.out.println(e.getMessage());
-    }
-    finally{
+    } finally {
       cloudLock.unlock();
     }
-    
+
     u.addCloud(c);
+    
     return id;
   }
 
   /**
-   * This method, given a type of Cloud, User who requests and a value, requests a Cloud
-   * If no Clouds available, place in queue based on value (higher the value, sooner the Cloud given)
+   * This method, given a type of Cloud, User who requests and a value, requests
+   * a Cloud If no Clouds available, place in queue based on value (higher the
+   * value, sooner the Cloud given)
+   *
    * @param u
    * @param type
    * @param value
    * @return Id of the Cloud who was auctioned
    */
   public String auctionCloud(User u, String type, double value) {
-    Map<String,Cloud> usedClouds = this.cloudMap.get(type);
-    TreeMap<Double,User> auctionClouds = this.auctionsMap.get(type);
+    Map<String, Cloud> clouds = this.cloudMap.get(type);
+    TreeMap<Double, User> auctionClouds = this.auctionsMap.get(type);
     Condition available = this.cloudsAvailable.get(type);
-    int id = nextId.getId();
+    int id = this.nextId.getId();
     String typeId = type + "_" + id;
-    Cloud c = new Cloud(typeId,type,value,true);
-    
+    Cloud c = new Cloud(typeId, type, value, true);
+
     try {
       cloudLock.lock();
-      auctionLock.lock();
-      
-      if (usedClouds.size() >= CloudTypes.maxSize(type)) {
+      // if no clouds available, put in the auction map
+      if (clouds.size() >= CloudTypes.maxSize(type)) {
         auctionClouds.put(value, u);
         // while no clouds available and not the first in queue, go ZZZzzzZZZ
-        while (usedClouds.size() >= CloudTypes.maxSize(type) || !(auctionClouds.firstEntry().getValue().equals(u) && auctionClouds.firstEntry().getKey().equals(value))) {
+        while (clouds.size() >= CloudTypes.maxSize(type) || !(auctionClouds.firstEntry().getValue().equals(u) && auctionClouds.firstEntry().getKey().equals(value))) {
           try {
             available.await();
-          }
-          catch (InterruptedException e) {}
+          } catch (InterruptedException e) {}
         }
+        auctionClouds.remove(value, u); // no longer in queue, so leave it
       }
-      usedClouds.put(typeId,c);
-      this.userByCloudId.put(typeId,u);
-      auctionClouds.remove(value,u);
-    }
-    finally {
-      auctionLock.unlock();
+      // a cloud is available, so add to CloudMaps
+      clouds.put(typeId, c);
+      this.userByCloudId.put(typeId, u);
+    } finally {
       cloudLock.unlock();
     }
+    
     u.addCloud(c);
+    
     return typeId;
   }
 
   /**
-   * This method clears a Cloud. If User is null, that means that is the system freeing a Cloud
+   * This method clears a Cloud. If User is null, that means that is the system
+   * freeing a Cloud
+   *
    * @param u User who wants to free the cloud
    * @param id id of the cloud that will be freed
-   * @throws InexistentCloudException if tried to free a Cloud that does not exist in the system
-   * @throws UserDoesNotOwnCloudException if user who tried to free the Cloud does not own it
-  */
-  public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException{
-    Map<String,Cloud> usedClouds = this.cloudMap.get(typeFromId(id));
-    double cost = 0;
-    if (usedClouds == null)
+   * @throws InexistentCloudException if tried to free a Cloud that does not
+   * exist in the system
+   * @throws UserDoesNotOwnCloudException if user who tried to free the Cloud
+   * does not own it
+   */
+  public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException {
+    Map<String, Cloud> clouds = this.cloudMap.get(typeFromId(id));
+
+    if (clouds == null) {
       throw new InexistentCloudException(typeFromId(id));
+    }
+
     Cloud c = null;
     User owner = null;
+
     try {
       cloudLock.lock();
-      c = usedClouds.get(id);
-    }
-    finally{
+      c = clouds.get(id);
+    } finally {
       cloudLock.unlock();
     }
-    if (c == null)
-        throw new InexistentCloudException(id);
-    
+
+    if (c == null) {
+      throw new InexistentCloudException(id);
+    }
+
     String type = c.getType();
     Condition available = cloudsAvailable.get(type);
-    cost = c.getAmmountToPay();
-    
+    double cost = c.getAmmountToPay();
+
     try {
       cloudLock.lock();
-      if (u != null && !u.isMyCloud(id)) // if not system and does not own cloud, throw exception
+      // if not system and does not own cloud, throw exception
+      if (u != null && !u.isMyCloud(id)) 
         throw new UserDoesNotOwnCloudException(id);
-      usedClouds.remove(id);
+
+      // remove from CloudMap
+      clouds.remove(id);
       owner = this.userByCloudId.remove(id);
+      // a new slot is available, so wake up all who are ZZZzzzZZ on this type
       available.signalAll();
-    }
-    finally {
+    } finally {
       cloudLock.unlock();
     }
-    if (u != null) {// if not system freeing, remove from user
-      u.removeCloud(id);
-      u.addMsg("A tua Cloud de id " + id + " foi libertada! Custo da Cloud: " + cost);
+    // now we can remove the Cloud from its owner, and add a log message
+    if (owner != null) {
+      owner.removeCloud(id);
+      owner.addMsg("A tua Cloud de id " + id + " foi libertada! Custo da Cloud: " + cost);
     }
-    else if (owner != null) {// if system freeing, owner removes cloud
-          owner.removeCloud(id);
-          owner.addMsg("A tua Cloud de id " + id + " foi libertada! Custo da Cloud: " + cost);
-         }
   }
 
   /**
-   * Method that logs a user into the system. If email does not exist, or password
-   * is not a match, throws Exception.
-   * If everything went fine, returns the User instance.
+   * Method that logs a user into the system. If email does not exist, or
+   * password is not a match, throws Exception. If everything went fine, returns
+   * the User instance.
+   *
    * @param email email of the user that wants to login
    * @param pass password that unlocks the account
    * @throws InexistentUserException if user does not exist in the database
@@ -196,45 +225,48 @@ public class CloudAlloc {
     try {
       userLock.lock();
       u = this.users.get(email);
-    }
-    finally {
+    } finally {
       userLock.unlock();
     }
-    if (u == null)
+    if (u == null) {
       throw new InexistentUserException(email);
-    if (!u.login(pass))
+    }
+    if (!u.login(pass)) {
       throw new FailedLoginException();
+    }
 
     return u;
   }
 
   /**
    * This method registers a new user into the system. If email already exists,
-   * throws an exception.
-   * If not, creates a new User, logs it into the system and returns its instance
+   * throws an exception. If not, creates a new User, logs it into the system
+   * and returns its instance
+   *
    * @param email Email to be registered into the system
    * @param pass Password to be associated with the user
    * @throws EmailNotUniqueException if email already registered in the system
    * @return User instance of registered user
    */
   public User registerUser(String email, String pass) throws EmailNotUniqueException {
-    User u = new User(email,pass);
+    User u = new User(email, pass);
     try {
       userLock.lock();
-      if (this.users.containsKey(email))
+      if (this.users.containsKey(email)) {
         throw new EmailNotUniqueException(email);
-      this.users.put(email,u);
-    }
-    finally {
+      }
+      this.users.put(email, u);
+    } finally {
       userLock.unlock();
     }
     return u;
   }
 
-  private static String typeFromId(String id){
-    if (id != null)
+  private static String typeFromId(String id) {
+    if (id != null) {
       return id.split("\\_")[0];
-    else 
+    } else {
       return null;
+    }
   }
 }
