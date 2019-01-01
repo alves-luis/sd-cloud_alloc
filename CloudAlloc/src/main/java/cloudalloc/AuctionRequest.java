@@ -1,5 +1,7 @@
 package cloudalloc;
 
+import server.Menu;
+
 /**
  * This Class is called whenever someone makes a request of a cloud using an auction
  * It goes to ZZZzzzZZZ if no Clouds available, and when finally a Cloud is allocated,
@@ -26,7 +28,7 @@ public class AuctionRequest implements Runnable {
     System.out.println("Started auction request for user " + user.getEmail() + " of type " + type);
     
     String id = c.auctionCloud(user, type, value);
-    user.addMsg("Reserva do tipo " + type + " concluída! Id: " + id + " . Valor: " + value);
+    user.addMsg(Menu.auctionConcluded(type, id, value));
     
     System.out.println("Auction complete for user " + user.getEmail() + ". Id: " + id);
   }

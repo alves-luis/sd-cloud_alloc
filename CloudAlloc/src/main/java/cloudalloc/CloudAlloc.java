@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import server.Menu;
 
 /**
  *
@@ -205,7 +206,7 @@ public class CloudAlloc {
     // now we can remove the Cloud from its owner, and add a log message
     if (owner != null) {
       owner.removeCloud(id);
-      owner.addMsg("A tua Cloud de id " + id + " foi libertada! Custo da Cloud: " + cost);
+      owner.addMsg(Menu.cloudFreed(id, cost));
     }
   }
 
