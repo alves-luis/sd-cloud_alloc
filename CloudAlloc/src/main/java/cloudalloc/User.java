@@ -50,7 +50,7 @@ public class User {
   }
 
   /**
-   * Only one person can logout at a time, that's why it is synchronized
+   * Only one person can logout at a time
    * @return
    */
   public synchronized boolean logout() {
@@ -123,7 +123,7 @@ public class User {
    * Returns cost of removed clouds
    * @return
    */
-  public double getDebt() {
+  public synchronized double getDebt() {
     return this.debt;
   }
   
