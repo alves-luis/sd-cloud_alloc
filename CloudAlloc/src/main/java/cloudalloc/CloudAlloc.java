@@ -194,40 +194,28 @@ public class CloudAlloc {
     Map<String, Cloud> clouds = this.cloudMap.get(type);
     Condition available = cloudsAvailable.get(type);
 
-    if (clouds == null)
+    if (clouds == null) // invalid type
       throw new InexistentCloudException(typeFromId(id));
 
     Cloud c = null;
     User owner = null;
     
-    try {
-      this.cloudLockByType.get(type).lock();
-      c = clouds.get(id);
-    } finally {
-      this.cloudLockByType.get(type).unlock();
-    }
-
-    if (c == null)
-      throw new InexistentCloudException(id);
-   
-    double cost = c.getAmmountToPay();
-    
     // if not system and does not own cloud, throw exception
-    if (u != null && !u.isMyCloud(id)) 
+    if (u != null && !u.isMyCloud(id))
       throw new UserDoesNotOwnCloudException(id);
-
+    
     try {
       this.cloudLockByType.get(type).lock();
-
-      // remove from CloudMap
-      Cloud success = clouds.remove(id);
-      if (success == null) // if already removed, abort
-        return;
+      c = clouds.remove(id);
+      if (c == null)
+        throw new InexistentCloudException(id);
       // a new slot is available, so wake up all who are ZZZzzzZZ on this type
       available.signalAll();
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
+    
+    double cost = c.getAmmountToPay();
     
     // remove from id -> user map
     try {
