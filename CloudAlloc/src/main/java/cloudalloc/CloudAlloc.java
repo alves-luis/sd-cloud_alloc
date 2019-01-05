@@ -140,7 +140,7 @@ public class CloudAlloc {
       // if no clouds available, put in the auction map
       if (clouds.size() >= CloudTypes.maxSize(type)) {
         auctionClouds.put(value, u);
-        // while no clouds available, not the first in queue and no requestsWaiting, go ZZZzzzZZZ
+        // while no clouds available, not the first in queue and requestsWaiting, go ZZZzzzZZZ
         while (clouds.size() >= CloudTypes.maxSize(type) ||
                 !(auctionClouds.firstEntry().getValue().equals(u) && auctionClouds.firstEntry().getKey().equals(value))
                 || this.requestWaiting.get() > 0) {
