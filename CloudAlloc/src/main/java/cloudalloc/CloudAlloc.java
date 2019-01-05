@@ -23,8 +23,8 @@ public class CloudAlloc {
   private final Map<String, Map<String, Cloud>> cloudMap;
   /* Key -> Id of Cloud | Value -> User that owns it */
   private final Map<String, User> userByCloudId;
-  /* Lock to be used with CloudMaps */
-  private ReentrantLock cloudLock;
+  /* Lock to be used with CloudMaps, per type */
+  private final Map<String,ReentrantLock> cloudLockByType;
 
   /* Conditions according to type of Cloud, when one becomes available */
   private final Map<String, Condition> cloudsAvailable;
@@ -48,13 +48,14 @@ public class CloudAlloc {
     this.cloudsAvailable = new HashMap<>();
     this.auctionsMap = new HashMap<>();
     this.users = new HashMap<>();
-    this.cloudLock = new ReentrantLock();
+    this.cloudLockByType = new HashMap<>();
     this.userLock = new ReentrantLock();
     this.nextId = new Counter();
 
     // add a new condition, auction TreeMap and CloudMap per CloudType
     CloudTypes.getNames().forEach((n) -> {
-      cloudsAvailable.put(n, cloudLock.newCondition());
+      cloudLockByType.put(n,new ReentrantLock());
+      cloudsAvailable.put(n, (cloudLockByType.get(n)).newCondition());
       auctionsMap.put(n, new TreeMap<>(Comparator.reverseOrder()));
       cloudMap.put(n, new HashMap<>());
     });
@@ -70,11 +71,11 @@ public class CloudAlloc {
   public String requestCloud(User u, String type) {
     boolean foundOne = false;
     Map<String, Cloud> clouds = this.cloudMap.get(type);
-    String id = type + "_" + nextId.getId();
+    String id = type + "_" + this.nextId.getId();
     Cloud c = new Cloud(id, type, CloudTypes.getPrice(type), false);
 
     try {
-      cloudLock.lock();
+      this.cloudLockByType.get(type).lock();
       // if no clouds available, search for auctioned ones
       if (clouds.size() >= CloudTypes.maxSize(type)) {
         for (Cloud d : clouds.values()) {
@@ -102,7 +103,7 @@ public class CloudAlloc {
     } catch (InexistentCloudException | UserDoesNotOwnCloudException e) {
       System.out.println(e.getMessage());
     } finally {
-      cloudLock.unlock();
+      this.cloudLockByType.get(type).unlock();
     }
 
     u.addCloud(c);
@@ -129,7 +130,7 @@ public class CloudAlloc {
     Cloud c = new Cloud(typeId, type, value, true);
 
     try {
-      cloudLock.lock();
+      this.cloudLockByType.get(type).lock();
       // if no clouds available, put in the auction map
       if (clouds.size() >= CloudTypes.maxSize(type)) {
         auctionClouds.put(value, u);
@@ -145,7 +146,7 @@ public class CloudAlloc {
       clouds.put(typeId, c);
       this.userByCloudId.put(typeId, u);
     } finally {
-      cloudLock.unlock();
+      this.cloudLockByType.get(type).unlock();
     }
     
     u.addCloud(c);
@@ -165,7 +166,8 @@ public class CloudAlloc {
    * does not own it
    */
   public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException {
-    Map<String, Cloud> clouds = this.cloudMap.get(typeFromId(id));
+    String type = typeFromId(id);
+    Map<String, Cloud> clouds = this.cloudMap.get(type);
 
     if (clouds == null) {
       throw new InexistentCloudException(typeFromId(id));
@@ -173,24 +175,24 @@ public class CloudAlloc {
 
     Cloud c = null;
     User owner = null;
+    
 
     try {
-      cloudLock.lock();
+      this.cloudLockByType.get(type).lock();
       c = clouds.get(id);
     } finally {
-      cloudLock.unlock();
+      this.cloudLockByType.get(type).unlock();
     }
 
     if (c == null) {
       throw new InexistentCloudException(id);
     }
 
-    String type = c.getType();
     Condition available = cloudsAvailable.get(type);
     double cost = c.getAmmountToPay();
 
     try {
-      cloudLock.lock();
+      this.cloudLockByType.get(type).lock();
       // if not system and does not own cloud, throw exception
       if (u != null && !u.isMyCloud(id)) 
         throw new UserDoesNotOwnCloudException(id);
@@ -201,7 +203,7 @@ public class CloudAlloc {
       // a new slot is available, so wake up all who are ZZZzzzZZ on this type
       available.signalAll();
     } finally {
-      cloudLock.unlock();
+      this.cloudLockByType.get(type).unlock();
     }
     // now we can remove the Cloud from its owner, and add a log message
     if (owner != null) {
@@ -224,10 +226,10 @@ public class CloudAlloc {
   public User loginUser(String email, String pass) throws InexistentUserException, FailedLoginException {
     User u = null;
     try {
-      userLock.lock();
+      this.userLock.lock();
       u = this.users.get(email);
     } finally {
-      userLock.unlock();
+      this.userLock.unlock();
     }
     if (u == null) {
       throw new InexistentUserException(email);
@@ -252,13 +254,13 @@ public class CloudAlloc {
   public User registerUser(String email, String pass) throws EmailNotUniqueException {
     User u = new User(email, pass);
     try {
-      userLock.lock();
+      this.userLock.lock();
       if (this.users.containsKey(email)) {
         throw new EmailNotUniqueException(email);
       }
       this.users.put(email, u);
     } finally {
-      userLock.unlock();
+      this.userLock.unlock();
     }
     return u;
   }
