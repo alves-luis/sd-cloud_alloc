@@ -220,13 +220,16 @@ public class CloudAlloc {
       this.cloudLockByType.get(type).lock();
 
       // remove from CloudMap
-      clouds.remove(id);
+      Cloud success = clouds.remove(id);
+      if (success == null) // if already removed, abort
+        return;
       // a new slot is available, so wake up all who are ZZZzzzZZ on this type
       available.signalAll();
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
     
+    // remove from id -> user map
     try {
       this.userByCloudIdLock.lock();
       owner = this.userByCloudId.remove(id);
