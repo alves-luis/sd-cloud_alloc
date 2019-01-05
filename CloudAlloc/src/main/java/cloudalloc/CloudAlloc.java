@@ -31,6 +31,9 @@ public class CloudAlloc {
 
   /* Counter for no repetition of ids */
   private final Counter nextId;
+  
+  /* Counter for num of request pending */
+  private final Counter requestWaiting;
 
   /* Auctions running */
   /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
@@ -51,6 +54,7 @@ public class CloudAlloc {
     this.cloudLockByType = new HashMap<>();
     this.userLock = new ReentrantLock();
     this.nextId = new Counter();
+    this.requestWaiting = new Counter();
 
     // add a new condition, auction TreeMap and CloudMap per CloudType
     CloudTypes.getNames().forEach((n) -> {
@@ -89,6 +93,7 @@ public class CloudAlloc {
 
       // if not found an auctioned one, go ZZZzzZZ while no Clouds available
       if (!foundOne) {
+        this.requestWaiting.add(); // add to count of requests waiting
         while (clouds.size() >= CloudTypes.maxSize(type)) {
           try {
             this.cloudsAvailable.get(type).await();
@@ -99,6 +104,7 @@ public class CloudAlloc {
       // Got a spot, so add to CloudMaps
       clouds.put(id, c);
       this.userByCloudId.put(id, u);
+      this.requestWaiting.remove(); // no longer waiting so remove
       
     } catch (InexistentCloudException | UserDoesNotOwnCloudException e) {
       System.out.println(e.getMessage());
@@ -134,8 +140,10 @@ public class CloudAlloc {
       // if no clouds available, put in the auction map
       if (clouds.size() >= CloudTypes.maxSize(type)) {
         auctionClouds.put(value, u);
-        // while no clouds available and not the first in queue, go ZZZzzzZZZ
-        while (clouds.size() >= CloudTypes.maxSize(type) || !(auctionClouds.firstEntry().getValue().equals(u) && auctionClouds.firstEntry().getKey().equals(value))) {
+        // while no clouds available, not the first in queue and no requestsWaiting, go ZZZzzzZZZ
+        while (clouds.size() >= CloudTypes.maxSize(type) ||
+                !(auctionClouds.firstEntry().getValue().equals(u) && auctionClouds.firstEntry().getKey().equals(value))
+                || this.requestWaiting.get() > 0) {
           try {
             available.await();
           } catch (InterruptedException e) {}

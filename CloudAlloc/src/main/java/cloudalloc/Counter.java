@@ -16,4 +16,16 @@ public class Counter {
     int r = id++;
     return r;
   }
+  
+  public synchronized int get() {
+    return id;
+  }
+  
+  public synchronized void add() {
+    id++;
+  }
+
+  public synchronized void remove() {
+    id--;
+  }
 }
