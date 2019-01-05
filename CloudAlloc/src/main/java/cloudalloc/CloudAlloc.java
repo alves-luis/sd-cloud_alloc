@@ -23,6 +23,8 @@ public class CloudAlloc {
   private final Map<String, Map<String, Cloud>> cloudMap;
   /* Key -> Id of Cloud | Value -> User that owns it */
   private final Map<String, User> userByCloudId;
+  /* Lock to manage the map above */
+  private final ReentrantLock userByCloudIdLock;
   /* Lock to be used with CloudMaps, per type */
   private final Map<String,ReentrantLock> cloudLockByType;
 
@@ -53,6 +55,7 @@ public class CloudAlloc {
     this.users = new HashMap<>();
     this.cloudLockByType = new HashMap<>();
     this.userLock = new ReentrantLock();
+    this.userByCloudIdLock = new ReentrantLock();
     this.nextId = new Counter();
     this.requestWaiting = new Counter();
 
@@ -99,20 +102,26 @@ public class CloudAlloc {
             this.cloudsAvailable.get(type).await();
           } catch (InterruptedException e) {}
         }
+        this.requestWaiting.remove(); // no longer waiting so remove
       }
 
       // Got a spot, so add to CloudMaps
-      clouds.put(id, c);
-      this.userByCloudId.put(id, u);
-      this.requestWaiting.remove(); // no longer waiting so remove
+      clouds.put(id, c);    
+      
+      try {
+        this.userByCloudIdLock.lock();
+        this.userByCloudId.put(id, u);
+      } finally {
+        this.userByCloudIdLock.unlock();
+      }
+      
+      u.addCloud(c);
       
     } catch (InexistentCloudException | UserDoesNotOwnCloudException e) {
       System.out.println(e.getMessage());
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
-
-    u.addCloud(c);
     
     return id;
   }
@@ -152,12 +161,20 @@ public class CloudAlloc {
       }
       // a cloud is available, so add to CloudMaps
       clouds.put(typeId, c);
-      this.userByCloudId.put(typeId, u);
+      
+      try {
+        this.userByCloudIdLock.lock();
+        this.userByCloudId.put(typeId, u);
+      }
+      finally {
+        this.userByCloudIdLock.unlock();
+      }
+      
+      u.addCloud(c); 
+      
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
-    
-    u.addCloud(c);
     
     return typeId;
   }
@@ -177,14 +194,12 @@ public class CloudAlloc {
     String type = typeFromId(id);
     Map<String, Cloud> clouds = this.cloudMap.get(type);
 
-    if (clouds == null) {
+    if (clouds == null)
       throw new InexistentCloudException(typeFromId(id));
-    }
 
     Cloud c = null;
     User owner = null;
     
-
     try {
       this.cloudLockByType.get(type).lock();
       c = clouds.get(id);
@@ -192,9 +207,8 @@ public class CloudAlloc {
       this.cloudLockByType.get(type).unlock();
     }
 
-    if (c == null) {
+    if (c == null)
       throw new InexistentCloudException(id);
-    }
 
     Condition available = cloudsAvailable.get(type);
     double cost = c.getAmmountToPay();
@@ -207,7 +221,13 @@ public class CloudAlloc {
 
       // remove from CloudMap
       clouds.remove(id);
-      owner = this.userByCloudId.remove(id);
+      try {
+        this.userByCloudIdLock.lock();
+        owner = this.userByCloudId.remove(id);
+      }
+      finally {
+        this.userByCloudIdLock.unlock();
+      }
       // a new slot is available, so wake up all who are ZZZzzzZZ on this type
       available.signalAll();
     } finally {
@@ -239,12 +259,10 @@ public class CloudAlloc {
     } finally {
       this.userLock.unlock();
     }
-    if (u == null) {
+    if (u == null)
       throw new InexistentUserException(email);
-    }
-    if (!u.login(pass)) {
+    if (!u.login(pass))
       throw new FailedLoginException();
-    }
 
     return u;
   }
@@ -263,9 +281,8 @@ public class CloudAlloc {
     User u = new User(email, pass);
     try {
       this.userLock.lock();
-      if (this.users.containsKey(email)) {
+      if (this.users.containsKey(email))
         throw new EmailNotUniqueException(email);
-      }
       this.users.put(email, u);
     } finally {
       this.userLock.unlock();
@@ -274,10 +291,9 @@ public class CloudAlloc {
   }
 
   private static String typeFromId(String id) {
-    if (id != null) {
+    if (id != null)
       return id.split("\\_")[0];
-    } else {
+    else
       return null;
-    }
   }
 }
