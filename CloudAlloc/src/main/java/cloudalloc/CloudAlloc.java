@@ -107,21 +107,21 @@ public class CloudAlloc {
 
       // Got a spot, so add to CloudMaps
       clouds.put(id, c);    
-      
-      try {
-        this.userByCloudIdLock.lock();
-        this.userByCloudId.put(id, u);
-      } finally {
-        this.userByCloudIdLock.unlock();
-      }
-      
-      u.addCloud(c);
-      
+     
     } catch (InexistentCloudException | UserDoesNotOwnCloudException e) {
       System.out.println(e.getMessage());
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
+    
+    try {
+      this.userByCloudIdLock.lock();
+      this.userByCloudId.put(id, u);
+    } finally {
+      this.userByCloudIdLock.unlock();
+    }
+
+    u.addCloud(c);
     
     return id;
   }
@@ -160,21 +160,20 @@ public class CloudAlloc {
         auctionClouds.remove(value, u); // no longer in queue, so leave it
       }
       // a cloud is available, so add to CloudMaps
-      clouds.put(typeId, c);
-      
-      try {
-        this.userByCloudIdLock.lock();
-        this.userByCloudId.put(typeId, u);
-      }
-      finally {
-        this.userByCloudIdLock.unlock();
-      }
-      
-      u.addCloud(c); 
+      clouds.put(typeId, c); 
       
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
+    
+    try {
+      this.userByCloudIdLock.lock();
+      this.userByCloudId.put(typeId, u);
+    } finally {
+      this.userByCloudIdLock.unlock();
+    }
+    
+    u.addCloud(c);
     
     return typeId;
   }
@@ -193,6 +192,7 @@ public class CloudAlloc {
   public void freeCloud(User u, String id) throws InexistentCloudException, UserDoesNotOwnCloudException {
     String type = typeFromId(id);
     Map<String, Cloud> clouds = this.cloudMap.get(type);
+    Condition available = cloudsAvailable.get(type);
 
     if (clouds == null)
       throw new InexistentCloudException(typeFromId(id));
@@ -209,29 +209,29 @@ public class CloudAlloc {
 
     if (c == null)
       throw new InexistentCloudException(id);
-
-    Condition available = cloudsAvailable.get(type);
+   
     double cost = c.getAmmountToPay();
+    
+    // if not system and does not own cloud, throw exception
+    if (u != null && !u.isMyCloud(id)) 
+      throw new UserDoesNotOwnCloudException(id);
 
     try {
       this.cloudLockByType.get(type).lock();
-      // if not system and does not own cloud, throw exception
-      if (u != null && !u.isMyCloud(id)) 
-        throw new UserDoesNotOwnCloudException(id);
 
       // remove from CloudMap
       clouds.remove(id);
-      try {
-        this.userByCloudIdLock.lock();
-        owner = this.userByCloudId.remove(id);
-      }
-      finally {
-        this.userByCloudIdLock.unlock();
-      }
       // a new slot is available, so wake up all who are ZZZzzzZZ on this type
       available.signalAll();
     } finally {
       this.cloudLockByType.get(type).unlock();
+    }
+    
+    try {
+      this.userByCloudIdLock.lock();
+      owner = this.userByCloudId.remove(id);
+    } finally {
+      this.userByCloudIdLock.unlock();
     }
     // now we can remove the Cloud from its owner, and add a log message
     if (owner != null) {
