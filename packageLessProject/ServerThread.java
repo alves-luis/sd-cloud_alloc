@@ -1,19 +1,6 @@
 /*
  * This Thread is running everytime a new user connects to the main server
  */
-package server;
-
-import cloudalloc.AuctionRequest;
-import cloudalloc.CloudAlloc;
-import cloudalloc.CloudRequest;
-import cloudalloc.CloudTypes;
-import cloudalloc.User;
-import exceptions.UserDoesNotOwnCloudException;
-import exceptions.FailedLoginException;
-import exceptions.InvalidTypeException;
-import exceptions.InexistentCloudException;
-import exceptions.InexistentUserException;
-import exceptions.EmailNotUniqueException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -120,7 +107,7 @@ public class ServerThread implements Runnable {
     String email = getString();
     out.println("Insere a palavra-passe:");
     String pass = getString();
-    
+
     try {
       this.u = c.registerUser(email, pass);
       System.out.println("User with IP " + s.getRemoteSocketAddress() + " registered with e-mail " + email);

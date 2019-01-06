@@ -1,6 +1,4 @@
-package cloudalloc;
 
-import exceptions.InexistentCloudException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +30,7 @@ public class User {
     this.log = new MessageLog();
     this.debt = 0;
   }
-  
+
   public String getEmail() {
     return this.email;
   }
@@ -55,11 +53,11 @@ public class User {
    */
   public synchronized boolean logout() {
     boolean canLogout = this.loggedIn;
-    if (canLogout) 
+    if (canLogout)
       this.loggedIn = false;
     return canLogout;
   }
-  
+
   /**
    * Returns the status of the user
    * @return
@@ -88,7 +86,7 @@ public class User {
     this.myClouds.remove(id);
     debt += c.getAmmountToPay();
   }
-  
+
   /**
    * Given an id, returns if the cloud belongs to this user
    * @param id
@@ -105,7 +103,7 @@ public class User {
   public synchronized double getTotalDebt() {
     return this.myClouds.values().stream().mapToDouble(c -> c.getAmmountToPay()).sum();
   }
-  
+
   /**
    * Given an Id of a Cloud, returns the amount of money it cost until now
    * @param id
@@ -118,7 +116,7 @@ public class User {
     else
       return c.getAmmountToPay();
   }
-  
+
   /**
    * Returns cost of removed clouds
    * @return
@@ -126,7 +124,7 @@ public class User {
   public synchronized double getDebt() {
     return this.debt;
   }
-  
+
   /**
    * Returns the Ids of Clouds this users owns
    * @return
@@ -134,7 +132,7 @@ public class User {
   public synchronized List<String> getCloudsId() {
     return this.myClouds.keySet().stream().collect(Collectors.toList());
   }
-  
+
   /**
    * Returns this user's MessageLog
    * @return
@@ -142,7 +140,7 @@ public class User {
   public MessageLog getLog() {
     return this.log;
   }
-  
+
   /**
    * Adds a message to this user Log
    * @param msg
@@ -150,7 +148,7 @@ public class User {
   public void addMsg(String msg) {
     this.log.writeMessage(msg);
   }
-  
+
   /**
    * Returns a new message if available, or null if no new messages
    * @return
