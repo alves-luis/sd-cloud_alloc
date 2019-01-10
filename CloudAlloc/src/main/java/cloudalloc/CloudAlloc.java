@@ -5,8 +5,10 @@ import exceptions.UserDoesNotOwnCloudException;
 import exceptions.InexistentCloudException;
 import exceptions.EmailNotUniqueException;
 import exceptions.InexistentUserException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
@@ -39,7 +41,7 @@ public class CloudAlloc {
 
   /* Auctions running */
   /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
-  private final Map<String, TreeMap<Double, User>> auctionsMap;
+  private final Map<String, TreeMap<Double, List<User>>> auctionsMap;
 
   /* Map of users by e-mail */
   private final Map<String, User> users;
@@ -138,7 +140,7 @@ public class CloudAlloc {
    */
   public String auctionCloud(User u, String type, double value) {
     Map<String, Cloud> clouds = this.cloudMap.get(type);
-    TreeMap<Double, User> auctionClouds = this.auctionsMap.get(type);
+    TreeMap<Double, List<User>> auctionClouds = this.auctionsMap.get(type);
     Condition available = this.cloudsAvailable.get(type);
     int id = this.nextId.getId();
     String typeId = type + "_" + id;
@@ -148,16 +150,19 @@ public class CloudAlloc {
       this.cloudLockByType.get(type).lock();
       // if no clouds available, put in the auction map
       if (clouds.size() >= CloudTypes.maxSize(type)) {
-        auctionClouds.put(value, u);
+        List<User> usersWithSameValue = auctionClouds.get(value);
+        if (usersWithSameValue == null)
+          auctionClouds.put(value, new ArrayList<>());
+        auctionClouds.get(value).add(u);
         // while no clouds available, not the first in queue and requestsWaiting, go ZZZzzzZZZ
         while (clouds.size() >= CloudTypes.maxSize(type) ||
-                !(auctionClouds.firstEntry().getValue().equals(u) && auctionClouds.firstEntry().getKey().equals(value))
+                !(auctionClouds.firstEntry().getValue().contains(u) && auctionClouds.firstEntry().getKey().equals(value))
                 || this.requestWaiting.get() > 0) {
           try {
             available.await();
           } catch (InterruptedException e) {}
         }
-        auctionClouds.remove(value, u); // no longer in queue, so leave it
+        auctionClouds.get(value).remove(u); // no longer in queue, so leave it
       }
       // a cloud is available, so add to CloudMaps
       clouds.put(typeId, c); 
