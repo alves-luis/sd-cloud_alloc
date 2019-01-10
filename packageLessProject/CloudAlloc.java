@@ -1,10 +1,18 @@
 
+import exceptions.FailedLoginException;
+import exceptions.UserDoesNotOwnCloudException;
+import exceptions.InexistentCloudException;
+import exceptions.EmailNotUniqueException;
+import exceptions.InexistentUserException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import server.Menu;
 
 /**
  *
@@ -26,13 +34,13 @@ public class CloudAlloc {
 
   /* Counter for no repetition of ids */
   private final Counter nextId;
-  
+
   /* Counter for num of request pending */
   private final Counter requestWaiting;
 
   /* Auctions running */
   /* Key -> cloudType | Value -> Ordered Map of Auction Value -> User who made it */
-  private final Map<String, TreeMap<Double, User>> auctionsMap;
+  private final Map<String, TreeMap<Double, List<User>>> auctionsMap;
 
   /* Map of users by e-mail */
   private final Map<String, User> users;
@@ -99,14 +107,14 @@ public class CloudAlloc {
       }
 
       // Got a spot, so add to CloudMaps
-      clouds.put(id, c);    
-     
+      clouds.put(id, c);
+
     } catch (InexistentCloudException | UserDoesNotOwnCloudException e) {
       System.out.println(e.getMessage());
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
-    
+
     try {
       this.userByCloudIdLock.lock();
       this.userByCloudId.put(id, u);
@@ -115,7 +123,7 @@ public class CloudAlloc {
     }
 
     u.addCloud(c);
-    
+
     return id;
   }
 
@@ -131,7 +139,7 @@ public class CloudAlloc {
    */
   public String auctionCloud(User u, String type, double value) {
     Map<String, Cloud> clouds = this.cloudMap.get(type);
-    TreeMap<Double, User> auctionClouds = this.auctionsMap.get(type);
+    TreeMap<Double, List<User>> auctionClouds = this.auctionsMap.get(type);
     Condition available = this.cloudsAvailable.get(type);
     int id = this.nextId.getId();
     String typeId = type + "_" + id;
@@ -141,33 +149,39 @@ public class CloudAlloc {
       this.cloudLockByType.get(type).lock();
       // if no clouds available, put in the auction map
       if (clouds.size() >= CloudTypes.maxSize(type)) {
-        auctionClouds.put(value, u);
+        List<User> usersWithSameValue = auctionClouds.get(value);
+        if (usersWithSameValue == null)
+          auctionClouds.put(value, new ArrayList<>());
+        auctionClouds.get(value).add(u);
         // while no clouds available, not the first in queue and requestsWaiting, go ZZZzzzZZZ
         while (clouds.size() >= CloudTypes.maxSize(type) ||
-                !(auctionClouds.firstEntry().getValue().equals(u) && auctionClouds.firstEntry().getKey().equals(value))
+                !(auctionClouds.firstEntry().getValue().contains(u) && auctionClouds.firstEntry().getKey().equals(value))
                 || this.requestWaiting.get() > 0) {
           try {
             available.await();
           } catch (InterruptedException e) {}
         }
-        auctionClouds.remove(value, u); // no longer in queue, so leave it
+        List<User> listOfUsers = auctionClouds.get(value);
+        listOfUsers.remove(u); // no longer in queue, so leave it
+        if (listOfUsers.isEmpty()) // if list empty, remove value from map
+          auctionClouds.remove(value);
       }
       // a cloud is available, so add to CloudMaps
-      clouds.put(typeId, c); 
-      
+      clouds.put(typeId, c);
+
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
-    
+
     try {
       this.userByCloudIdLock.lock();
       this.userByCloudId.put(typeId, u);
     } finally {
       this.userByCloudIdLock.unlock();
     }
-    
+
     u.addCloud(c);
-    
+
     return typeId;
   }
 
@@ -192,11 +206,11 @@ public class CloudAlloc {
 
     Cloud c = null;
     User owner = null;
-    
+
     // if not system and does not own cloud, throw exception
     if (u != null && !u.isMyCloud(id))
       throw new UserDoesNotOwnCloudException(id);
-    
+
     try {
       this.cloudLockByType.get(type).lock();
       c = clouds.remove(id);
@@ -207,9 +221,9 @@ public class CloudAlloc {
     } finally {
       this.cloudLockByType.get(type).unlock();
     }
-    
+
     double cost = c.getAmmountToPay();
-    
+
     // remove from id -> user map
     try {
       this.userByCloudIdLock.lock();

@@ -162,7 +162,10 @@ public class CloudAlloc {
             available.await();
           } catch (InterruptedException e) {}
         }
-        auctionClouds.get(value).remove(u); // no longer in queue, so leave it
+        List<User> listOfUsers = auctionClouds.get(value);
+        listOfUsers.remove(u); // no longer in queue, so leave it
+        if (listOfUsers.isEmpty()) // if list empty, remove value from map
+          auctionClouds.remove(value);
       }
       // a cloud is available, so add to CloudMaps
       clouds.put(typeId, c); 
