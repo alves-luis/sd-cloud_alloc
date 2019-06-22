@@ -6,3 +6,5 @@ Team members:
 * [Rafaela Rodrigues](https://github.com/rafaelacrr)
 * [André Gonçalves](https://github.com/andregclvs)
 * [Diogo Gonçalves](https://github.com/Recksun)
+
+Grade: 18/20
